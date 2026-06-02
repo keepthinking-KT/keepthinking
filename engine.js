@@ -28,7 +28,7 @@ const DEC_FILE = path.join(MEM_DIR, "decisions.json");
 
 // ─── Config ──────────────────────────────────────────────────
 const CFG = {
-  maxNodes: 200, maxEdges: 500, maxInject: 5, injectChars: 1500,
+  maxNodes: 200, maxEdges: 500, maxInject: 15, injectChars: 4000,
   archiveDays: 90, minTaskMs: 3000, decayWindow: 7, decayHalfLife: 30, minWeight: 0.1,
   diskMinGB: 7, memoryMinMB: 500, checkIntervalMs: 1800000,
 };
@@ -413,6 +413,7 @@ function buildCognitiveContext() {
       const tags = (n.tags || []).slice(0, 3).join(",");
       ctx += tierIcon(topNodes.indexOf(n)) + " [" + date + "] " + (n.project || "general") + ": " + n.label;
       if (tags) ctx += " [" + tags + "]";
+      if (n.context) ctx += "\n     → " + (n.context.length > 120 ? n.context.slice(0, 120) + "..." : n.context);
       ctx += "\n";
     }
     ctx += "\n";
@@ -789,7 +790,14 @@ const DECISION_STOP_WORDS = new Set([
 function extractDecisions(text, maxResults = 10) {
   if (!text || text.length < 10) return [];
   // Split into sentences (Chinese: 、。！？ English: .!?)
-  const sentences = text.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim());
+  // Split by Chinese punctuation first, then English sentences (. followed by space+capital)
+  const rawParts = text.split(/(?<=[。！？])\s*/).filter(s => s.trim());
+  let allSentences = [];
+  for (const part of rawParts) {
+    const enParts = part.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(s => s.trim());
+    allSentences.push(...enParts);
+  }
+  const sentences = allSentences.filter(s => s.trim()).map(s => s.trim());
   const results = [];
   const seen = new Set();
   

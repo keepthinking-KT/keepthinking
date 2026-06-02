@@ -206,6 +206,8 @@ else
         exit 1
     }
     echo -e "  ${GREEN}引擎文件已复制${NC}"
+    # Copy password tool
+    cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" && echo -e "  ${GREEN}password.js 已安装${NC}" || echo -e "  ${YELLOW}password.js 未找到，跳过${NC}"
 fi
 
 # ─── Copy web console ─────────────────────────────────
@@ -376,8 +378,7 @@ echo -e "    ${BOLD}curl http://localhost:3456/api/stats${NC}"
 echo ""
 echo ""
 echo -e "${BL}🔐 设置 Web 控制台密码${NC}"
-echo -e "  运行: keepthinking --set-password"
-echo -e "  或直接: node ~/.keepthinking/password.js --set 你的密码"
+echo -e "  运行: node $INSTALL_DIR/password.js --set 你的密码"
 echo -e "  如果无需密码，按回车跳过"
 if [ -t 0 ]; then
   read -p "  输入密码（回车跳过）: " USER_PASSWORD

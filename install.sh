@@ -195,6 +195,7 @@ if [ "$EXISTING_DATA" = true ]; then
         exit 1
     }
     echo -e "  ${GREEN}引擎文件已更新（保留 memory/ 不变）${NC}"
+    cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" || true
 else
     # 全新安装：全部复制
     cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || echo -e "  ${YELLOW}engine.jsc 未找到，跳过${NC}"
@@ -206,9 +207,9 @@ else
         exit 1
     }
     echo -e "  ${GREEN}引擎文件已复制${NC}"
-    # Copy password tool
-    cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" && echo -e "  ${GREEN}password.js 已安装${NC}" || echo -e "  ${YELLOW}password.js 未找到，跳过${NC}"
 fi
+    # Copy password tool (both new install and upgrade)
+    cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" && echo -e "  ${GREEN}password.js 已安装${NC}" || echo -e "  ${YELLOW}password.js 未找到，跳过${NC}"
 
 # ─── Copy web console ─────────────────────────────────
 STEP_NUM=$([ "$MODE" = "download" ] && echo "5w" || echo "4w")

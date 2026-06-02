@@ -358,7 +358,8 @@
 </footer>
 
 <script>
-const API = 'http://localhost:3456';
+const BASE_PATH = window.location.pathname.replace(/\/console\.html$/, '').replace(/\/$/, '');
+const API = BASE_PATH || 'http://localhost:3456';
 
 function GET(path) {
   return fetch(API + path)

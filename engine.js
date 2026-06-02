@@ -167,6 +167,17 @@ function addNode(g, label, project, tags, context, opts) {
     }
   }
   
+  // Also sync to decisions/experiences files
+  if (node.type === "decision") {
+    const decs = loadJSON(DEC_FILE, []);
+    decs.push({ project: project, decision: label, tags: tags, context: context, time: nowISO(), source: o.source || "api" });
+    saveJSON(DEC_FILE, decs.slice(-500));
+  } else if (node.type === "experience" || node.type === "task" || node.type === "bug") {
+    const exps = loadJSON(EXP_FILE, []);
+    exps.push({ task: project, summary: label, type: node.type, tags: tags, context: context, time: nowISO(), source: o.source || "api" });
+    saveJSON(EXP_FILE, exps.slice(-500));
+  }
+
   saveGraph(g);
   return node;
 }

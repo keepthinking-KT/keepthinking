@@ -37,17 +37,25 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
   next();
 });
 
-// Auth guard
+// Auth guard — accepts Bearer token in header OR kt_token in cookie
 const publicPaths = ["/api/health", "/api/login"];
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") return next();
   if (publicPaths.includes(req.path)) return next();
   if (req.path === "/" || req.path.startsWith("/console.html")) return next();
   if (!hasPassword) return next();
-  const token = (req.headers.authorization || "").replace("Bearer ", "");
+  // Check Authorization header
+  let token = (req.headers.authorization || "").replace("Bearer ", "");
+  // Also check cookie
+  if (!token) {
+    const cookies = (req.headers.cookie || "").split(";").map(c => c.trim());
+    const ktCookie = cookies.find(c => c.startsWith("kt_token="));
+    if (ktCookie) token = ktCookie.split("=")[1];
+  }
   if (token && TOKENS.has(token) && TOKENS.get(token).expires > Date.now()) return next();
   if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Unauthorized" });
   next();
@@ -143,6 +151,64 @@ app.post("/api/bug/diagnose", (req, res) => {
 });
 
 app.get("/", (req, res) => {
+  // If password is set and user is not authenticated, show login page
+  if (hasPassword) {
+    let token = (req.headers.authorization || "").replace("Bearer ", "");
+    // Also check cookie
+    if (!token) {
+      const cookies = (req.headers.cookie || "").split(";").map(c => c.trim());
+      const ktCookie = cookies.find(c => c.startsWith("kt_token="));
+      if (ktCookie) token = ktCookie.split("=")[1];
+    }
+    if (!token || !TOKENS.has(token) || TOKENS.get(token).expires <= Date.now()) {
+      return res.type("html").send(`<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeepThinking — 登录</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;background:#0d1117;color:#e6edf3;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;max-width:400px;width:90%;text-align:center}
+h1{font-size:1.8rem;margin-bottom:8px;background:linear-gradient(135deg,#58a6ff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:#8b949e;margin-bottom:24px;font-size:0.9rem}
+input{width:100%;padding:12px 16px;border:1px solid #30363d;border-radius:8px;background:#0d1117;color:#e6edf3;font-size:1rem;outline:none;margin-bottom:16px}
+input:focus{border-color:#58a6ff}
+button{width:100%;padding:12px;background:#1f6feb;color:#fff;border:none;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600}
+button:hover{background:#388bfd}
+.error{color:#f85149;margin-top:8px;font-size:0.85rem;display:none}
+.footer{margin-top:20px;color:#8b949e;font-size:0.8rem}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>KeepThinking</h1>
+<p class="sub">AI 的第二大脑</p>
+<input type="password" id="pwd" placeholder="请输入访问密码" autofocus>
+<button onclick="login()">登 录</button>
+<p class="error" id="err"></p>
+<p class="footer">v7.2.0 · 数据100%本地 · 零上传</p>
+</div>
+<script>
+async function login() {
+  const p=document.getElementById('pwd').value;
+  const e=document.getElementById('err');
+  try {
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
+    if(r.ok) {
+      const d=await r.json();
+      document.cookie='kt_token='+d.token+';path=/;max-age=86400';
+      location.reload();
+    } else { e.style.display='block';e.textContent='密码错误'; }
+  } catch(_) { e.style.display='block';e.textContent='连接失败，请确认服务已启动'; }
+}
+document.getElementById('pwd').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+</script>
+</body>
+</html>`);
+    }
+  }
   const html = path.join(webDir, "console.html");
   if (fs.existsSync(html)) res.type("html").send(fs.readFileSync(html, "utf8"));
   else res.type("html").send("<h1>KeepThinking v7.2.0</h1>");

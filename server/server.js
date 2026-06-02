@@ -180,14 +180,17 @@ app.post("/api/bug/diagnose", (req, res) => {
     const matches = bugEngine.searchBugPatterns(desc);
     const classification = bugEngine.classifyBug(desc);
     const topMatch = matches.length > 0 ? matches[0] : null;
+    // Use classifyBug for confidence (searchBugPatterns returns 'score' instead)
+    const classMatch = (classification && classification.length > 0) ? classification[0] : null;
+    const finalConfidence = classMatch?.confidence || topMatch?.score || 0;
     res.json({
-      diagnosis: topMatch?.type || classification.type || "unknown",
-      confidence: topMatch?.confidence || classification.confidence || 0,
-      pattern: topMatch?.type || null,
-      patternLabel: topMatch?.tags?.join(", ") || null,
-      fixSuggestion: topMatch?.fixTemplate || null,
-      hitsMatched: topMatch?.hitCount || 0,
-      matchesDetected: matches.length,
+      diagnosis: classMatch?.type || topMatch?.type || "unknown",
+      confidence: Math.round(finalConfidence * 100) / 100,
+      pattern: classMatch?.type || topMatch?.type || null,
+      patternLabel: classMatch?.tags?.join(", ") || topMatch?.tags?.join(", ") || null,
+      fixSuggestion: classMatch?.fixTemplate || topMatch?.fixTemplate || null,
+      hitsMatched: classMatch?.hitCount || 0,
+      matchesDetected: matches.length + (classification?.length || 0),
       allPatterns: bugEngine.listBugPatterns().length
     });
   } catch (e) { res.status(500).json({ error: e.message }); }

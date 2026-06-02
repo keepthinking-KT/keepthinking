@@ -444,7 +444,7 @@ function buildCognitiveContext() {
     ctx += "## ⚠️ 代码审查提醒\n最近高频修复 Bug，建议本次改动后检查：空值保护、mounted 检查、异步异常处理\n\n";
   }
   
-  // Git integration (v7.1.0) — auto-discover projects from cognitive graph
+  // Git integration (v7.2.0) — auto-discover projects from cognitive graph
   try {
     const projects = new Set(g.nodes.map(n => n.project).filter(Boolean));
     const { execSync } = require("child_process");
@@ -583,7 +583,7 @@ function listProjects() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  GIT INTEGRATION (v7.1.0)
+//  GIT INTEGRATION (v7.2.0)
 //  Reads local Git history for developer context
 // ══════════════════════════════════════════════════════════════
 
@@ -625,7 +625,7 @@ function readGitContext(maxCommits, workDir) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  LOCAL EMBEDDING ENGINE (v7.1.0)
+//  LOCAL EMBEDDING ENGINE (v7.2.0)
 //  Zero API calls — 100% local ONNX Runtime WASM
 // ══════════════════════════════════════════════════════════════
 
@@ -1105,7 +1105,7 @@ module.exports = {
   // Helpers
   gid, nowISO, ensureDir,
 
-  // Embedding engine (v7.1.0)
+  // Embedding engine (v7.2.0)
   getEmbedder, embedText, semanticSearch, cosineSimilarity,
 
   // Bug pattern engine (v7.2.0)

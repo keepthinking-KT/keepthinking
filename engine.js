@@ -609,9 +609,11 @@ async function getEmbedder() {
   _embedderLoading = true;
   try {
     const { pipeline, env } = require('@xenova/transformers');
-    env.localModelPath = '/opt/keepthinking-dev/v7/models/';
-    env.allowRemoteModels = false;
+    // Cache models locally in ~/.keepthinking/cache/
+    env.cacheDir = path.join(BASE, 'cache');
+    env.allowRemoteModels = true;
     _embedder = await pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2');
+    console.log('[keepthinking] ONNX embedding model loaded and cached');
     _embedderReady = true;
     console.log('[keepthinking] Embedding engine ready (ONNX, local, 384-dim)');
     return _embedder;

@@ -105,8 +105,23 @@ app.get("/api/search/semantic", async (req, res) => {
     const { q, max = "10" } = req.query;
     if (!q || q.length < 2) return res.json({ results: [], query: q || "", count: 0 });
     const results = await engine.semanticSearch(q, parseInt(max));
-    res.json({ results, query: q, count: results.length, engine: "local-onnx" });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    // Fallback: if ONNX model unavailable, degrade to keyword search
+    if (results.length === 0) {
+      const kwResults = engine.searchMemory(q, parseInt(max));
+      if (kwResults.length > 0) {
+        return res.json({ results: kwResults, query: q, count: kwResults.length, engine: "keyword-fallback", fallback: true, reason: "ONNX模型未就绪，已降级为关键词搜索" });
+      }
+    }
+    res.json({ results, query: q, count: results.length, engine: results.length > 0 ? "local-onnx" : "keyword-fallback" });
+  } catch (e) {
+    // If semantic search fails entirely, try keyword
+    try {
+      const kwResults = engine.searchMemory(q, parseInt(max || "10"));
+      res.json({ results: kwResults, query: q, count: kwResults.length, engine: "keyword-fallback", fallback: true, reason: e.message });
+    } catch (e2) {
+      res.status(500).json({ error: e2.message });
+    }
+  }
 });
 
 app.get("/api/projects", (req, res) => {

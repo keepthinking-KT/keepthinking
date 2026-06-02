@@ -260,10 +260,6 @@ if [ -f "$INSTALL_DIR/mcp/server.js" ]; then
     sed -i 's|path.join(__dirname, "..", "..", "engine-bug.js")|path.join(__dirname, "..", "engine-bug.js")|' "$INSTALL_DIR/mcp/server.js" 2>/dev/null || true
     echo -e "  ${GREEN}MCP bug engine 路径已修复${NC}"
 fi
-# Create password handler
-# Auth is built into server.js — no separate middleware file needed
-fi
-fi
 # Ensure bin is in PATH
 export PATH="$INSTALL_DIR/bin:$PATH"
 echo -e "  ${GREEN}bin 已加入 PATH${NC}"

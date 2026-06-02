@@ -326,6 +326,22 @@ systemctl --user enable keepthinking.service 2>/dev/null || true
 
 echo -e "  ${GREEN}systemd 服务已创建${NC}"
 
+# ─── 预下载 ONNX 语义搜索模型（约130MB）──────────────
+echo ""
+echo -e "${BL}🔽 预下载语义搜索模型 (130MB)...${NC}"
+echo -e "  ${YL}首次使用会自动下载，现在提前缓存可免等待${NC}"
+node -e "
+  const { pipeline } = require('@xenova/transformers');
+  pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2', {
+    cacheDir: '$INSTALL_DIR/cache',
+    localModelPath: '$INSTALL_DIR/cache/models'
+  }).then(() => {
+    console.log('  ${GR}✅ ONNX 语义模型已缓存${NC}');
+  }).catch(e => {
+    console.log('  ${YL}ℹ️ 模型预下载跳过（可首次搜索时自动下载）: ' + e.message.slice(0,60) + '${NC}');
+  });
+" 2>/dev/null &
+
 # ─── 自动发现现有记忆 ──────────────────────────────────────
 echo ""
 echo -e "${BL}🔍 正在扫描现有记忆...${NC}"

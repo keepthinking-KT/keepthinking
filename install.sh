@@ -207,6 +207,13 @@ else
         exit 1
     }
     echo -e "  ${GREEN}引擎文件已复制${NC}"
+    # Copy server directory
+    if [ -d "$SRC_DIR/server" ]; then
+      mkdir -p "$INSTALL_DIR/server"
+      cp "$SRC_DIR/server/server.js" "$INSTALL_DIR/server/" 2>/dev/null || true
+      cp "$SRC_DIR/server/package.json" "$INSTALL_DIR/server/" 2>/dev/null || true
+      echo -e "  ${GREEN}Server 已复制${NC}"
+    fi
 fi
     # Copy password tool (both new install and upgrade)
     cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" && echo -e "  ${GREEN}password.js 已安装${NC}" || echo -e "  ${YELLOW}password.js 未找到，跳过${NC}"

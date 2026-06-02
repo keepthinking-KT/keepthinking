@@ -876,6 +876,201 @@ function extractDecisions(text, maxResults = 10) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  AUTO-COLLECT LOOP (v7.2.0) — 持续积累记忆，永不清零
+// ══════════════════════════════════════════════════════════════
+
+let _collectTimer = null;
+let _lastCollectAt = 0;
+let _collectedSessionHashes = new Set();  // dedup across collects
+let _collectedCommitHashes = new Set();
+
+// Load persisted dedup hashes from disk (survive restarts)
+function loadCollectState() {
+  try {
+    const state = loadJSON(path.join(MEM_DIR, "collect-state.json"), { sessions: [], commits: [] });
+    _collectedSessionHashes = new Set(state.sessions || []);
+    _collectedCommitHashes = new Set(state.commits || []);
+  } catch (_) {
+    _collectedSessionHashes = new Set();
+    _collectedCommitHashes = new Set();
+  }
+}
+
+function saveCollectState() {
+  try {
+    saveJSON(path.join(MEM_DIR, "collect-state.json"), {
+      sessions: [..._collectedSessionHashes].slice(-500),
+      commits: [..._collectedCommitHashes].slice(-500),
+      lastCollectAt: _lastCollectAt,
+    });
+  } catch (_) {}
+}
+
+// Collect from OpenClaw session files
+async function collectSessions() {
+  const homeDir = process.env.HOME || "/root";
+  const sessionsDir = path.join(homeDir, ".openclaw", "agents");
+  if (!fs.existsSync(sessionsDir)) {
+    console.log("[keepthinking-collect] No sessions directory at", sessionsDir);
+    return { found: 0, imported: 0 };
+  }
+  
+  const agentDirs = fs.readdirSync(sessionsDir, { withFileTypes: true }).filter(d => d.isDirectory());
+  let found = 0, imported = 0;
+  const g = loadGraph();
+  
+  for (const agentDir of agentDirs) {
+    const agentSessionsDir = path.join(sessionsDir, agentDir.name, "sessions");
+    if (!fs.existsSync(agentSessionsDir)) continue;
+    const sessionFiles = fs.readdirSync(agentSessionsDir, { withFileTypes: true });
+    
+    for (const sf of sessionFiles) {
+      if (sf.isDirectory() || !sf.name.endsWith(".jsonl") || sf.name.includes(".trajectory.")) continue;
+      const jsonlPath = path.join(agentSessionsDir, sf.name);
+      const stat = fs.statSync(jsonlPath);
+      const hash = agentDir.name + "/" + sf.name + ":" + stat.mtimeMs;
+      if (_collectedSessionHashes.has(hash)) continue;
+      
+      try {
+        const content = fs.readFileSync(jsonlPath, "utf8");
+        const lines = content.trim().split("\n").slice(-50);
+        const texts = [];
+        let userMsg = "";
+        for (const line of lines) {
+          try {
+            const msg = JSON.parse(line);
+            // OpenClaw JSONL: messages are nested: {type:"message", message:{role:"user", content:[{type:"text",text:"..."}]}}
+            let role = null, text = null;
+            if (msg.type === "message" && msg.message) {
+              role = msg.message.role;
+              if (Array.isArray(msg.message.content)) {
+                text = msg.message.content.map(c => c.text || "").join("\n");
+              } else if (typeof msg.message.content === "string") {
+                text = msg.message.content;
+              }
+            }
+            // Fallback: plain {role, content} format
+            if (!role) role = msg.role;
+            if (!text && msg.content) {
+              text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+            }
+            if (role === "user" && text) userMsg = text;
+            if (role === "assistant" && text && userMsg) {
+              texts.push(userMsg + "\n" + text);
+              userMsg = "";
+            }
+          } catch (_) {}
+        }
+        
+        for (const text of texts) {
+          if (text.length < 20) continue;
+          const decisions = extractDecisions(text, 5);
+          for (const d of decisions) {
+            addNode(g, d.label, d.project || "general", d.tags, d.context, { source: "auto-collect", type: d.type, weight: d.confidence ? Math.min(d.confidence * 4, 4) : 3 });
+            imported++;
+          }
+        }
+        _collectedSessionHashes.add(hash);
+        found++;
+      } catch (e) {
+        // Skip corrupted files
+      }
+    }
+  }
+  
+  saveCollectState();
+  return { found, imported };
+}
+
+// Collect from Git projects in cognitive graph
+async function collectGitProjects() {
+  const g = loadGraph();
+  const projects = [...new Set(g.nodes.map(n => n.project).filter(Boolean))];
+  if (projects.length === 0) return { found: 0, imported: 0 };
+  
+  const homeDir = process.env.HOME || "/root";
+  let found = 0, imported = 0;
+  
+  for (const proj of projects) {
+    const possiblePaths = [
+      homeDir + "/workspaces/" + proj,
+      homeDir + "/workspaces/kongming/" + proj,
+      "/opt/" + proj,
+    ];
+    
+    for (const projPath of possiblePaths) {
+      try {
+        const { execSync } = require("child_process");
+        execSync("git rev-parse --git-dir", { cwd: projPath, stdio: "pipe", timeout: 1000 });
+        
+        const log = execSync("git log --oneline -20", { cwd: projPath, encoding: "utf8", timeout: 3000 }).trim();
+        if (!log) continue;
+        
+        const lines = log.split("\n");
+        for (const line of lines) {
+          const hash = line.split(" ")[0];
+          if (_collectedCommitHashes.has(hash)) continue;
+          
+          const msg = line.slice(41).trim();
+          if (msg.length < 5) continue;
+          
+          const decisions = extractDecisions("[Git] " + proj + ": " + msg, 3);
+          for (const d of decisions) {
+            addNode(g, d.label, proj, d.tags, d.context, { source: "git-commit", type: d.type, weight: d.confidence ? Math.min(d.confidence * 4, 4) : 3 });
+            imported++;
+          }
+          _collectedCommitHashes.add(hash);
+        }
+        found++;
+        break; // Found valid git repo
+      } catch (_) {}
+    }
+  }
+  
+  saveCollectState();
+  return { found, imported };
+}
+
+// Main collect loop — called every 10 minutes
+async function runCollectLoop() {
+  _lastCollectAt = Date.now();
+  loadCollectState();
+  
+  try {
+    const sessionResult = await collectSessions();
+    console.log("[keepthinking-collect] Sessions: " + sessionResult.found + " files, " + sessionResult.imported + " decisions");
+  } catch (e) {
+    console.error("[keepthinking-collect] Session error:", e.message);
+  }
+  
+  try {
+    const gitResult = await collectGitProjects();
+    console.log("[keepthinking-collect] Git: " + gitResult.found + " projects, " + gitResult.imported + " decisions");
+  } catch (e) {
+    console.error("[keepthinking-collect] Git error:", e.message);
+  }
+}
+
+function startCollectLoop(intervalMs) {
+  loadCollectState();
+  const ms = intervalMs || 600000; // default 10 min
+  if (_collectTimer) clearInterval(_collectTimer);
+  console.log("[keepthinking-collect] Auto-collect loop started (every " + (ms/60000) + "min)");
+  // Run immediately on start
+  runCollectLoop().then(() => {
+    _collectTimer = setInterval(runCollectLoop, ms);
+  });
+}
+
+function stopCollectLoop() {
+  if (_collectTimer) {
+    clearInterval(_collectTimer);
+    _collectTimer = null;
+    console.log("[keepthinking-collect] Auto-collect loop stopped");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 //  MODULE EXPORTS (independent — no OpenClaw dependency)
 // ══════════════════════════════════════════════════════════════
 
@@ -915,4 +1110,7 @@ module.exports = {
 
   // Bug pattern engine (v7.2.0)
   bugEngine,
+
+  // Auto-collect loop (v7.2.0)
+  runCollectLoop, startCollectLoop, stopCollectLoop,
 };

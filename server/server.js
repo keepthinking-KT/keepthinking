@@ -269,6 +269,8 @@ app.listen(PORT, HOST, async () => {
   console.log("[keepthinking-server] Web: " + webDir);
   if (hasPassword) console.log("[keepthinking-server] Auth: password protected");
   engine.startEnvHealer();
+  // Start auto-collect loop — accumulates memory forever
+  engine.startCollectLoop();
   // Auto-discover existing memories on first run
   if (engine.getStats().nodes === 0) {
     try {

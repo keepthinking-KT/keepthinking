@@ -328,19 +328,20 @@ echo -e "  ${GREEN}systemd 服务已创建${NC}"
 
 # ─── 预下载 ONNX 语义搜索模型（约130MB）──────────────
 echo ""
-echo -e "${BL}🔽 预下载语义搜索模型 (130MB)...${NC}"
-echo -e "  ${YL}首次使用会自动下载，现在提前缓存可免等待${NC}"
-node -e "
-  const { pipeline } = require('@xenova/transformers');
-  pipeline('feature-extraction', 'Xenova/paraphrase-multilingual-MiniLM-L12-v2', {
-    cacheDir: '$INSTALL_DIR/cache',
-    localModelPath: '$INSTALL_DIR/cache/models'
-  }).then(() => {
-    console.log('  ${GR}✅ ONNX 语义模型已缓存${NC}');
-  }).catch(e => {
-    console.log('  ${YL}ℹ️ 模型预下载跳过（可首次搜索时自动下载）: ' + e.message.slice(0,60) + '${NC}');
-  });
-" 2>/dev/null &
+echo -e "${BL}🔽 预下载语义搜索模型 (77MB)...${NC}"
+echo -e "  ${YL}从 keepthinking.vip 下载预打包模型...${NC}"
+if [ -d "$INSTALL_DIR/cache/Xenova" ]; then
+  echo -e "  ${GR}✅ 模型已存在，跳过下载${NC}"
+else
+  MODEL_URL="${DOWNLOAD_BASE}/onnx-model-v7.2.0.tar.gz"
+  if wget -q --show-progress -O /tmp/onnx-model.tar.gz "$MODEL_URL" 2>/dev/null || curl -sL "$MODEL_URL" -o /tmp/onnx-model.tar.gz; then
+    mkdir -p "$INSTALL_DIR/cache"
+    tar xzf /tmp/onnx-model.tar.gz -C "$INSTALL_DIR/cache/" 2>/dev/null && echo -e "  ${GR}✅ ONNX 语义模型已缓存 (130MB)${NC}" || echo -e "  ${YL}ℹ️ 解压失败，首次搜索时自动下载${NC}"
+    rm -f /tmp/onnx-model.tar.gz
+  else
+    echo -e "  ${YL}ℹ️ 下载失败，首次搜索时自动下载（或已降级为关键词搜索）${NC}"
+  fi
+fi
 
 # ─── 自动发现现有记忆 ──────────────────────────────────────
 echo ""

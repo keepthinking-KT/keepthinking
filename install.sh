@@ -304,7 +304,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$(which node) $INSTALL_DIR/loader.js
+ExecStart=$(which node) $INSTALL_DIR/server/server.js
 WorkingDirectory=$INSTALL_DIR
 Restart=on-failure
 RestartSec=10

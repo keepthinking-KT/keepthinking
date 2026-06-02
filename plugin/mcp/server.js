@@ -40,7 +40,7 @@ try {
 // Bug engine for bug diagnosis (v7.2.0)
 let bugEngine;
 try {
-  bugEngine = require(path.join(__dirname, "..", "..", "engine-bug.js"));
+  bugEngine = require(path.join(__dirname, "..", "engine-bug.js"));
 } catch (_) {
   bugEngine = null;
   if (process.env.DEBUG) console.error("[keepthinking-mcp] Bug engine not loaded");

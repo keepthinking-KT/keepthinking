@@ -145,8 +145,21 @@ app.post("/api/nodes", (req, res) => {
 app.post("/api/bug/diagnose", (req, res) => {
   try {
     const { description, query } = req.body || {};
-    const result = engine.bugDiagnose(description || query || "");
-    res.json(result);
+    const bugEngine = require(path.join(__dirname, "..", "engine-bug.js"));
+    const desc = description || query || "";
+    const matches = bugEngine.searchBugPatterns(desc);
+    const classification = bugEngine.classifyBug(desc);
+    const topMatch = matches.length > 0 ? matches[0] : null;
+    res.json({
+      diagnosis: topMatch?.type || classification.type || "unknown",
+      confidence: topMatch?.confidence || classification.confidence || 0,
+      pattern: topMatch?.type || null,
+      patternLabel: topMatch?.tags?.join(", ") || null,
+      fixSuggestion: topMatch?.fixTemplate || null,
+      hitsMatched: topMatch?.hitCount || 0,
+      matchesDetected: matches.length,
+      allPatterns: bugEngine.listBugPatterns().length
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

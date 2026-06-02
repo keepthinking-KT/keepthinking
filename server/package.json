@@ -1,0 +1,10 @@
+{
+  "name": "keepthinking-v7-server",
+  "version": "7.1.0",
+  "description": "KeepThinking v7.1.0 — Independent Cognitive Engine HTTP Server",
+  "private": true,
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

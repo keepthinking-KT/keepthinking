@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KeepThinking 认知引擎 v7.1.0</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117;
+    --bg-card: #161b22;
+    --bg-hover: #1c2129;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f6feb;
+    --success: #3fb950;
+    --warning: #d29922;
+    --danger: #f85149;
+    --radius: 8px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Header */
+  header {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header .badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  header .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.online { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .status-dot.offline { background: var(--danger); }
+
+  /* Main Layout */
+  main {
+    flex: 1;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card h3 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .card.full-width { grid-column: 1 / -1; }
+  .card.half-width { grid-column: span 2; }
+
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+  }
+  .stat-item {
+    text-align: center;
+    padding: 16px 12px;
+    background: var(--bg);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .stat-value.nodes { color: var(--accent); }
+  .stat-value.edges { color: #a371f7; }
+  .stat-value.exps { color: var(--success); }
+  .stat-value.decs { color: var(--warning); }
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Search */
+  .search-box {
+    width: 100%;
+    padding: 10px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-muted); }
+
+  /* Results List */
+  .results-list { margin-top: 12px; max-height: 400px; overflow-y: auto; }
+  .result-item {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .result-item:last-child { border-bottom: none; }
+  .result-item:hover { background: var(--bg-hover); }
+  .result-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .result-source {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .source-cognitive { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .source-experience { background: rgba(63,185,80,0.15); color: var(--success); }
+  .result-project {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .result-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+  .result-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .result-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.65rem;
+    background: var(--bg);
+    color: var(--text-muted);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .result-score {
+    font-size: 0.7rem;
+    color: var(--warning);
+    font-weight: 600;
+  }
+
+  /* Graph list */
+  .graph-section { margin-bottom: 16px; }
+  .graph-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .node-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 0.85rem;
+  }
+  .node-id {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .edge-item {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding: 3px 0;
+    font-family: monospace;
+  }
+
+  /* Project Table */
+  .project-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .project-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .project-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .project-table tr:hover td { background: var(--bg-hover); }
+  .project-name { font-weight: 600; }
+  .stat-num { font-family: monospace; }
+
+  /* Footer */
+  footer {
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    padding: 12px 24px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  footer .footer-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  footer .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  footer .dot.good { background: var(--success); }
+  footer .dot.warn { background: var(--warning); }
+  footer .dot.bad { background: var(--danger); }
+
+  /* Loading */
+  .loading { color: var(--text-muted); font-style: italic; padding: 16px 0; }
+  .empty { color: var(--text-muted); padding: 16px 0; text-align: center; }
+
+  /* Error */
+  .error-banner {
+    background: rgba(248,81,73,0.1);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 768px) {
+    main { padding: 16px; grid-template-columns: 1fr; }
+    header { padding: 12px 16px; }
+    header h1 { font-size: 1.1rem; }
+    .card.half-width { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>
+    🧠 KeepThinking 认知引擎
+    <span class="badge">v7.1.0</span>
+    <span class="status-dot online" id="statusDot" title="API Status"></span>
+  </h1>
+  <span style="font-size:0.75rem;color:var(--text-muted);">AI Developer Local Cognitive Engine</span>
+</header>
+
+<main>
+  <!-- Stats Cards -->
+  <div class="card full-width" id="statsCard">
+    <h3>📊 认知统计</h3>
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-item"><div class="stat-value nodes">-</div><div class="stat-label">节点 (Nodes)</div></div>
+      <div class="stat-item"><div class="stat-value edges">-</div><div class="stat-label">边 (Edges)</div></div>
+      <div class="stat-item"><div class="stat-value exps">-</div><div class="stat-label">经验 (Experiences)</div></div>
+      <div class="stat-item"><div class="stat-value decs">-</div><div class="stat-label">决策 (Decisions)</div></div>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="card" style="grid-column: span 2;">
+    <h3>🔍 记忆搜索</h3>
+    <input type="text" class="search-box" id="searchInput" placeholder="输入关键词搜索记忆..." autocomplete="off">
+    <div class="results-list" id="searchResults">
+      <div class="empty">输入关键词开始搜索认知图谱和记忆</div>
+    </div>
+  </div>
+
+  <!-- Cognitive Graph -->
+  <div class="card" style="grid-column: span 2;">
+    <h3>🔗 认知图谱</h3>
+    <div id="graphContent">
+      <div class="loading">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Projects -->
+  <div class="card full-width">
+    <h3>📂 项目列表</h3>
+    <div style="overflow-x: auto;">
+      <table class="project-table" id="projectTable">
+        <thead><tr><th>项目</th><th>节点</th><th>决策</th><th>经验</th><th>最后活跃</th></tr></thead>
+        <tbody id="projectBody"><tr><td colspan="5" class="loading" style="text-align:center;">加载中...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span id="footerFile" class="footer-stat">💾 数据目录: -</span>
+  <span id="footerMem" class="footer-stat"><span class="dot good"></span> 内存: -</span>
+  <span id="footerDisk" class="footer-stat"><span class="dot good"></span> 磁盘: -</span>
+</footer>
+
+<script>
+const API = 'http://localhost:3456';
+
+function GET(path) {
+  return fetch(API + path)
+    .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.json(); });
+}
+
+// Update status dot
+function setStatus(online) {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + (online ? 'online' : 'offline');
+  dot.title = online ? 'API Online' : 'API Offline';
+}
+
+// Load stats
+async function loadStats() {
+  try {
+    const s = await GET('/api/stats');
+    setStatus(true);
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-item"><div class="stat-value nodes">${s.nodes || 0}</div><div class="stat-label">节点 (Nodes)</div></div>
+      <div class="stat-item"><div class="stat-value edges">${s.edges || 0}</div><div class="stat-label">边 (Edges)</div></div>
+      <div class="stat-item"><div class="stat-value exps">${s.experiences || 0}</div><div class="stat-label">经验 (Experiences)</div></div>
+      <div class="stat-item"><div class="stat-value decs">${s.decisions || 0}</div><div class="stat-label">决策 (Decisions)</div></div>
+    `;
+
+    // Footer
+    document.getElementById('footerFile').innerHTML = '💾 数据目录: ' + (s.dataDir || '-');
+    const memMB = s.memoryFreeMB || 0;
+    const memDot = memMB > 500 ? 'good' : (memMB > 200 ? 'warn' : 'bad');
+    document.getElementById('footerMem').innerHTML = '<span class="dot ' + memDot + '"></span> 内存: ' + (memMB / 1024).toFixed(1) + ' GB';
+    const diskGB = parseFloat(s.diskFreeGB || '0');
+    const diskDot = diskGB > 7 ? 'good' : (diskGB > 3 ? 'warn' : 'bad');
+    document.getElementById('footerDisk').innerHTML = '<span class="dot ' + diskDot + '"></span> 磁盘: ' + s.diskFreeGB + ' GB';
+  } catch (e) {
+    setStatus(false);
+    console.error('Stats error:', e);
+  }
+}
+
+// Load graph
+async function loadGraph() {
+  try {
+    const g = await GET('/api/graph?maxNodes=30');
+    const container = document.getElementById('graphContent');
+    const nodes = g.nodes || [];
+    const edges = g.edges || [];
+
+    let html = '';
+    if (nodes.length) {
+      html += '<div class="graph-section"><div class="graph-section-title">🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
+      for (const n of nodes) {
+        html += '<div class="node-item">';
+        html += '<span class="node-id">' + (n.id || '') + '</span>';
+        html += '<span>' + (n.label || '').slice(0, 80) + '</span>';
+        html += '<span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">' + (n.project || '') + '</span>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    if (edges.length) {
+      html += '<div class="graph-section"><div class="graph-section-title">🔗 边 (' + edges.length + ')</div>';
+      for (const e of edges) {
+        const fromLabel = (nodes.find(n => n.id === e.from) || {}).label || e.from;
+        const toLabel = (nodes.find(n => n.id === e.to) || {}).label || e.to;
+        html += '<div class="edge-item">' + (fromLabel || e.from).slice(0, 30) + ' → ' + (toLabel || e.to).slice(0, 30) + ' <span style="color:#a371f7;">[' + (e.relation || '') + ']</span></div>';
+      }
+      html += '</div>';
+    }
+
+    if (!nodes.length && !edges.length) {
+      html = '<div class="empty">认知图谱为空 — 还没有记录任何决策</div>';
+    }
+
+    container.innerHTML = html;
+  } catch (e) {
+    document.getElementById('graphContent').innerHTML = '<div class="error-banner">加载图谱失败: ' + e.message + '</div>';
+    console.error('Graph error:', e);
+  }
+}
+
+// Load projects
+async function loadProjects() {
+  try {
+    const data = await GET('/api/projects');
+    const projects = data.projects || [];
+    const tbody = document.getElementById('projectBody');
+    if (!projects.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无项目</td></tr>';
+      return;
+    }
+    tbody.innerHTML = projects.map(p => `
+      <tr>
+        <td class="project-name">${p.name}</td>
+        <td class="stat-num">${p.nodes || 0}</td>
+        <td class="stat-num">${p.decisions || 0}</td>
+        <td class="stat-num">${p.experiences || 0}</td>
+        <td>${(p.lastActive || '').slice(0, 10)}</td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    document.getElementById('projectBody').innerHTML = '<tr><td colspan="5" class="error-banner" style="text-align:center;">加载项目失败: ' + e.message + '</td></tr>';
+    console.error('Projects error:', e);
+  }
+}
+
+// Search (with debounce)
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.trim();
+  clearTimeout(searchTimer);
+  if (!q) {
+    document.getElementById('searchResults').innerHTML = '<div class="empty">输入关键词开始搜索认知图谱和记忆</div>';
+    return;
+  }
+  searchTimer = setTimeout(async () => {
+    const container = document.getElementById('searchResults');
+    container.innerHTML = '<div class="loading">搜索中...</div>';
+    try {
+      const data = await GET('/api/search?q=' + encodeURIComponent(q) + '&max=15');
+      const results = data.results || [];
+      if (!results.length) {
+        container.innerHTML = '<div class="empty">未找到匹配结果</div>';
+        return;
+      }
+      container.innerHTML = results.map(r => `
+        <div class="result-item">
+          <div class="result-meta">
+            <span class="result-source source-${r.source === 'cognitive-graph' ? 'cognitive' : 'experience'}">${r.source}</span>
+            <span class="result-project">${r.project || 'general'}</span>
+            <span class="result-score">${r.relevance}</span>
+            <span class="result-time">${(r.time || '').slice(0, 10)}</span>
+          </div>
+          <div class="result-content">${r.content || ''}</div>
+          <div class="result-tags">${(r.tags || []).map(t => '<span class="tag">' + t + '</span>').join('')}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      container.innerHTML = '<div class="error-banner">搜索失败: ' + e.message + '</div>';
+      console.error('Search error:', e);
+    }
+  }, 300);
+});
+
+// Initial load
+loadStats();
+loadGraph();
+loadProjects();
+
+// Auto-refresh every 30s
+setInterval(() => {
+  loadStats();
+  loadGraph();
+  loadProjects();
+}, 30000);
+</script>
+
+</body>
+</html>

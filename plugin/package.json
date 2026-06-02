@@ -1,0 +1,15 @@
+{
+  "name": "keepthinking",
+  "version": "7.2.0",
+  "description": "KeepThinking — AI's Second Brain. OpenClaw native plugin for automatic AI memory capture.",
+  "main": "keepthinking.js",
+  "openclaw": {
+    "type": "plugin",
+    "hooks": [
+      "subagent_spawned",
+      "subagent_ended",
+      "gateway_start",
+      "before_prompt_build"
+    ]
+  }
+}

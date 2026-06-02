@@ -1,0 +1,8 @@
+node_modules/
+*.tar.gz
+*.bak*
+memory/
+*.log
+.DS_Store
+models/
+.ktpass

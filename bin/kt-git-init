@@ -1,0 +1,74 @@
+#!/bin/bash
+# KeepThinking v7.1.0 — Git Hook Installer
+# Usage: kt-git-init [--port PORT] [--host HOST]
+# Reads current directory, installs post-commit hook to sync commits to KeepThinking
+
+set -e
+
+KEEPTHINKING_PORT="${KEEPTHINKING_PORT:-3456}"
+KEEPTHINKING_HOST="${KEEPTHINKING_HOST:-127.0.0.1}"
+
+# Parse optional flags
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --port) KEEPTHINKING_PORT="$2"; shift 2 ;;
+    --host) KEEPTHINKING_HOST="$2"; shift 2 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+API_URL="http://${KEEPTHINKING_HOST}:${KEEPTHINKING_PORT}/api/nodes"
+
+# ─── Check if current directory is a git repo ───
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
+  echo "[kt-git-init] ERROR: Not a git repository (or any parent up to /)"
+  echo "  Run this from inside a git repo directory."
+  exit 1
+fi
+
+GIT_DIR=$(git rev-parse --git-dir)
+HOOKS_DIR="$GIT_DIR/hooks"
+HOOK_FILE="$HOOKS_DIR/post-commit"
+
+# ─── Create hooks directory if needed ───
+mkdir -p "$HOOKS_DIR"
+
+# ─── Get project name from repo directory ───
+PROJECT_NAME=$(basename "$(git rev-parse --show-toplevel)")
+
+# ─── Write post-commit hook ───
+cat > "$HOOK_FILE" << HOOKEOF
+#!/bin/bash
+# KeepThinking Post-Commit Hook — auto-installed by kt-git-init
+# Sends each commit message to KeepThinking cognitive engine as a memory node
+
+KEEPTHINKING_PORT="\${KEEPTHINKING_PORT:-$KEEPTHINKING_PORT}"
+KEEPTHINKING_HOST="\${KEEPTHINKING_HOST:-$KEEPTHINKING_HOST}"
+API_URL="http://\${KEEPTHINKING_HOST}:\${KEEPTHINKING_PORT}/api/nodes"
+
+# Get latest commit message (first line only)
+COMMIT_MSG=\$(git log -1 --pretty=%B | head -1)
+COMMIT_HASH=\$(git log -1 --pretty=%H | head -c 8)
+AUTHOR=\$(git log -1 --pretty=%an)
+PROJECT="\$(basename "\$(git rev-parse --show-toplevel)")"
+BRANCH=\$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+
+# Send to KeepThinking
+curl -s -X POST "\$API_URL" \\
+  -H "Content-Type: application/json" \\
+  -d "{\\"label\\": \\"\$COMMIT_MSG\\", \\"project\\": \\"\$PROJECT\\", \\"tags\\": [\\"git-commit\\", \\"auto\\", \\"branch:\$BRANCH\\"], \\"context\\": \\"commit \$COMMIT_HASH by \$AUTHOR on \$BRANCH\\", \\"source\\": \\"git-commit\\", \\"metadata\\": {\\"hash\\": \\"\$COMMIT_HASH\\", \\"author\\": \\"\$AUTHOR\\", \\"branch\\": \\"\$BRANCH\\"}}" \\
+  2>/dev/null || true
+
+echo "[kt-git-post-commit] Synced: \$COMMIT_HASH → KeepThinking"
+HOOKEOF
+
+chmod +x "$HOOK_FILE"
+
+echo ""
+echo "[kt-git-init] ✅ Git post-commit hook installed"
+echo "  Repo:    $(git rev-parse --show-toplevel)"
+echo "  Hook:    $HOOK_FILE"
+echo "  API:     $API_URL"
+echo ""
+echo "  Now every git commit will be logged to KeepThinking."
+echo "  Tags: git-commit, auto"

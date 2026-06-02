@@ -1,0 +1,45 @@
+#!/bin/bash
+# KeepThinking Update Tool v7.2.0 — 升级引擎不丢失数据
+# Usage: keepthinking-update
+set -e
+
+INSTALL_DIR="${KEEPTHINKING_HOME:-$HOME/.keepthinking}"
+SRC_DIR="$(dirname "$(dirname "$(readlink -f "$0")")")"
+
+echo "🔄 KeepThinking 升级中..."
+
+# 备份当前数据
+if [ -f "$INSTALL_DIR/memory/graph.json" ]; then
+  BACKUP_NAME="graph.json.backup-$(date +%Y%m%d%H%M%S)"
+  cp "$INSTALL_DIR/memory/graph.json" "$INSTALL_DIR/memory/$BACKUP_NAME"
+  echo "📦 已备份现有数据 → $BACKUP_NAME"
+fi
+
+# 更新引擎文件（不动 memory/）
+cp "$SRC_DIR/engine.js" "$INSTALL_DIR/engine.js" 2>/dev/null || echo "⚠ engine.js 未找到"
+cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || true
+cp "$SRC_DIR/engine-bug.js" "$INSTALL_DIR/engine-bug.js" 2>/dev/null || true
+cp "$SRC_DIR/engine-discover.js" "$INSTALL_DIR/engine-discover.js" 2>/dev/null || true
+cp "$SRC_DIR/loader.js" "$INSTALL_DIR/loader.js" 2>/dev/null || true
+
+# 更新 server/mcp（如果存在）
+if [ -f "$SRC_DIR/server/server.js" ]; then
+  cp "$SRC_DIR/server/server.js" "$INSTALL_DIR/server/server.js" 2>/dev/null || true
+fi
+if [ -f "$SRC_DIR/server/package.json" ]; then
+  cp "$SRC_DIR/server/package.json" "$INSTALL_DIR/server/package.json" 2>/dev/null || true
+fi
+if [ -d "$SRC_DIR/plugin/mcp" ]; then
+  cp -r "$SRC_DIR/plugin/mcp/"* "$INSTALL_DIR/mcp/" 2>/dev/null || true
+fi
+
+# 更新 bin 工具
+if [ -f "$SRC_DIR/bin/kt-git-init" ]; then
+  mkdir -p "$INSTALL_DIR/bin"
+  cp "$SRC_DIR/bin/kt-git-init" "$INSTALL_DIR/bin/kt-git-init" 2>/dev/null || true
+fi
+
+echo ""
+echo "✅ 升级完成！记忆数据完整保留"
+echo "  运行 kt-git-init 启用 Git 自动记录"
+echo "  运行 node $INSTALL_DIR/loader.js 重新启动引擎"

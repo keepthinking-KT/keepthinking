@@ -186,7 +186,7 @@ echo -e "${BLUE}[${STEP_NUM}/8]${NC} 复制引擎文件..."
 
 if [ "$EXISTING_DATA" = true ]; then
     # 无损模式：只更新代码文件，不动 memory/
-    cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || echo -e "  ${YELLOW}engine.jsc 未找到，跳过${NC}"
+    cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || true  # .jsc optional (MIT开源无需加密编译)
     cp "$SRC_DIR/engine.js" "$INSTALL_DIR/engine.js" 2>/dev/null || echo -e "  ${YELLOW}engine.js 未找到，跳过${NC}"
     cp "$SRC_DIR/engine-bug.js" "$INSTALL_DIR/engine-bug.js" 2>/dev/null || echo -e "  ${YELLOW}engine-bug.js 未找到，跳过${NC}"
     cp "$SRC_DIR/engine-discover.js" "$INSTALL_DIR/engine-discover.js" 2>/dev/null || echo -e "  ${YELLOW}engine-discover.js 未找到，跳过${NC}"
@@ -198,7 +198,7 @@ if [ "$EXISTING_DATA" = true ]; then
     cp "$SRC_DIR/password.js" "$INSTALL_DIR/password.js" 2>/dev/null && chmod +x "$INSTALL_DIR/password.js" || true
 else
     # 全新安装：全部复制
-    cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || echo -e "  ${YELLOW}engine.jsc 未找到，跳过${NC}"
+    cp "$SRC_DIR/engine.jsc" "$INSTALL_DIR/engine.jsc" 2>/dev/null || true  # .jsc optional (MIT开源无需加密编译)
     cp "$SRC_DIR/engine.js" "$INSTALL_DIR/engine.js" 2>/dev/null || echo -e "  ${YELLOW}engine.js 未找到，跳过${NC}"
     cp "$SRC_DIR/engine-bug.js" "$INSTALL_DIR/engine-bug.js" 2>/dev/null || echo -e "  ${YELLOW}engine-bug.js 未找到，跳过${NC}"
     cp "$SRC_DIR/engine-discover.js" "$INSTALL_DIR/engine-discover.js" 2>/dev/null || echo -e "  ${YELLOW}engine-discover.js 未找到，跳过${NC}"

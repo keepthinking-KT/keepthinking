@@ -12,7 +12,7 @@ catch (_) { console.error("[keepthinking-server] express not found"); process.ex
 
 const app = express();
 const PORT = parseInt(process.env.KEEPTHINKING_PORT || "3456", 10);
-const HOST = process.env.KEEPTHINKING_HOST || "127.0.0.1";
+const HOST = process.env.KEEPTHINKING_HOST || "0.0.0.0";
 const engine = require("../engine.js");
 
 // ─── Password Auth ─────────────────────────────────────────────

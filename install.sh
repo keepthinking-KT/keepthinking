@@ -313,6 +313,7 @@ WorkingDirectory=$INSTALL_DIR
 Restart=on-failure
 RestartSec=10
 Environment=KEEPTHINKING_HOME=$INSTALL_DIR
+Environment=KEEPTHINKING_HOST=0.0.0.0
 Environment=NODE_ENV=production
 
 [Install]
@@ -369,7 +370,8 @@ echo -e "  Web 控制台: ${BOLD}http://localhost:3456${NC}"
 echo -e "  MCP Server: ${BOLD}$INSTALL_DIR/mcp/server.js${NC}"
 echo ""
 echo -e "  ${YELLOW}启动命令:${NC}"
-echo -e "    ${BOLD}node $INSTALL_DIR/loader.js${NC}"
+echo -e "    ${BOLD}KEEPTHINKING_HOST=0.0.0.0 node $INSTALL_DIR/server/server.js${NC}"
+echo -e "    ${BOLD}(默认监听 127.0.0.1，外网访问必须设 0.0.0.0)${NC}"
 echo ""
 echo -e "  ${YELLOW}升级命令:${NC}"
 echo -e "    ${BOLD}keepthinking-update${NC}   # 一键升级，安全保留数据"

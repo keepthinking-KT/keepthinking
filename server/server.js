@@ -142,6 +142,36 @@ app.post("/api/nodes", (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Auto-Extract Decisions from Conversation ───────────────────
+app.post("/api/decisions/auto-extract", (req, res) => {
+  try {
+    const { text, project, source = "auto-extract" } = req.body || {};
+    if (!text || text.length < 10) return res.json({ extracted: [], message: "Text too short" });
+    
+    // Extract candidate decisions from text
+    const candidates = engine.extractDecisions(text);
+    const imported = [];
+    const g = engine.loadGraph();
+    
+    for (const c of candidates) {
+      // Use provided project or auto-detected
+      const p = project || c.project || "general";
+      const node = engine.addNode(g, c.label, p, c.tags, c.context, {
+        source: source,
+        type: c.type,
+        weight: c.confidence ? Math.min(c.confidence * 5, 5) : 3,
+      });
+      if (node) imported.push({ id: node.id, label: node.label, type: node.type, project: p, confidence: c.confidence });
+    }
+    
+    res.json({
+      candidates: candidates.length,
+      imported: imported.length,
+      decisions: imported,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/api/bug/diagnose", (req, res) => {
   try {
     const { description, query } = req.body || {};

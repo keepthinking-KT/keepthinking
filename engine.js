@@ -765,6 +765,82 @@ async function semanticSearch(query, maxResults) {
 
 
 // ══════════════════════════════════════════════════════════════
+//  AUTO-DECISION EXTRACTOR (v7.2.0)
+//  Extracts key decisions from conversation text using pattern matching
+// ══════════════════════════════════════════════════════════════
+
+const DECISION_PATTERNS = [
+  { re: /(?:决定|决定要|确定|选[用择定]|采用|定下|拍板)[：:]*\s*(.+?)(?:[。！;\n]|$)/g, type: 'decision' },
+  { re: /(?:修[复改正]了|改好了|修好了|修复完成|fixed|resolved|solved|patched)[：:]*\s*(.+?)(?:[。！.\n]|$)/gi, type: 'bug' },
+  { re: /(?:部署|上线|发布完成|deployed|released)[：:要]*\s*(.+?)(?:[。！.\n]|$)/gi, type: 'deployment' },
+  { re: /(?:架构|architecture|design)[：:是]*\s*(.+?)(?:[。！.\n]|$)/gi, type: 'architecture' },
+  { re: /(?:创建了|新建了|初始化了|搭建了|created|initialized)[：:了]*\s*(.+?)(?:[。！.\n]|$)/gi, type: 'creation' },
+  { re: /(?:should|decided to|chose to|plan to)\s+(.+?)(?:[.!]|$)/gi, type: 'decision' },
+  { re: /(?:给|为|对|在)\s*[^。！]*?(?:添加了|加入了|实现了|完成了|修复了|改为了|更新了|升级了|优化了|重构了|集成了|增加了|新建了)[^。！]*/g, type: 'creation' },
+  { re: /(?:添加了|加入了|实现了|完成了|更新了|升级了|优化了|重构了|集成了|增加了|新建了|发布了)[：:]*\s*(.+?)(?:[。！]|$)/g, type: 'creation' },
+];
+
+const DECISION_STOP_WORDS = new Set([
+  '我', '你', '他', '她', '它', '我们', '你们', '他们', '这', '那', '是', '的', '了', '吗', '吧', '呢', '啊', '嗯', '哦',
+  '好', '行', '可以', '知道', '明白', '了解', '对', '不对', '不', '没', '有', '没有', 'the', 'a', 'an', 'is', 'are', 'was', 'were',
+  'this', 'that', 'it', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'from', 'by', 'as',
+]);
+
+function extractDecisions(text, maxResults = 10) {
+  if (!text || text.length < 10) return [];
+  // Split into sentences (Chinese: 、。！？ English: .!?)
+  const sentences = text.split(/(?<=[。！？.!?])\s*/).filter(s => s.trim());
+  const results = [];
+  const seen = new Set();
+  
+  const extractors = [
+    // Fix/bug patterns: "修复了X" "fixed X" "solved X"
+    { re: /(?:修[复改正]了|fix(?:ed)?|resolved?|solved?|patched?)[：:]*\s*(.+)/i, type: 'bug' },
+    // Decision patterns: "决定X" "decided to X" "should X"
+    { re: /(?:决定|决定要|确定|选[用择定]|采用|定下|拍板)[：:]*\s*(.+)/i, type: 'decision' },
+    { re: /(?:should|decided to|chose to|plan to|going to)\s+(.+)/i, type: 'decision' },
+    // Creation: "创建了X" "实现了X" "添加了X" "集成了X"
+    { re: /(?:创建了|新建了|初始化了|搭建了|实现了|完成了|添加了|加入了|更新了|升级了|优化了|重构了|集成了|增加了|发布了|created|added|implemented|integrated)[：:]*\s*(.+)/gi, type: 'creation' },
+    // Action verbs: "给/为/对/把...添加了/修复了/实现了/改为了"
+    { re: /(?:给|为|对|在)\s*(.+?(?:添加了|加入了|实现了|完成了|修复了|改为了|更新了|升级了|优化了|重构了|集成了).+)/i, type: 'creation' },
+    // Deployment: "部署X" "上线X" "发布X" "deployed X"
+    { re: /(?:部署|上线|发布完成|deployed?|released?)[：:要]*\s*(.+)/i, type: 'deployment' },
+    // Architecture: "架构X" "design X"
+    { re: /(?:架构|architecture|design)[：:是]*\s*(.+)/i, type: 'architecture' },
+  ];
+  
+  for (const sent of sentences) {
+    if (sent.trim().length < 4) continue;
+    for (const ext of extractors) {
+      const m = sent.trim().match(ext.re);
+      if (!m) continue;
+      const snippet = (m[1] || m[0]).trim();
+      if (snippet.length < 4) continue;
+      if (seen.has(snippet)) continue;
+      seen.add(snippet);
+      
+      const project = guessProject(snippet);
+      const tags = extractTags(snippet, '');
+      if (!tags.includes(ext.type)) tags.unshift(ext.type);
+      if (!tags.includes("auto-extract")) tags.push("auto-extract");
+      
+      results.push({
+        label: snippet.slice(0, 60),
+        context: snippet.slice(0, 150),
+        type: ext.type,
+        project: project,
+        tags: tags.slice(0, 6),
+        confidence: 1 - (results.length * 0.05),
+      });
+      if (results.length >= maxResults) return results;
+      break; // one match per sentence
+    }
+    if (results.length >= maxResults) return results;
+  }
+  return results;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  MODULE EXPORTS (independent — no OpenClaw dependency)
 // ══════════════════════════════════════════════════════════════
 
@@ -780,6 +856,9 @@ module.exports = {
 
   // Search
   search, searchExps, searchMemory, decayWeight, extractTags, guessProject,
+
+  // Auto-extract
+  extractDecisions, DECISION_PATTERNS,
 
   // Context builder
   buildCognitiveContext, fmtInjection,

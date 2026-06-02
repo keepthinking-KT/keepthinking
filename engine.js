@@ -849,6 +849,9 @@ function extractDecisions(text, maxResults = 10) {
       const snippet = (m[1] || m[0]).trim();
       if (snippet.length < 4) continue;
       if (seen.has(snippet)) continue;
+      // Filter: must have at least 3 non-trivial words (skip "in one night." etc)
+      const meaningfulWords = snippet.replace(/[.,!?;:，。！？；：]/g,'').trim().split(/\s+/).filter(w => w.length > 1 && !/^(in|on|at|to|of|the|a|an|is|are|was|were|be|it|and|or|but|for|with|from|by|as|we|i|you|he|she|they|not|no|yes|ok)$/i.test(w));
+      if (meaningfulWords.length < 3) continue;
       seen.add(snippet);
       
       const project = guessProject(snippet);

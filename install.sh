@@ -418,3 +418,20 @@ fi
 
 echo -e "  ${GREEN}🔒 所有数据 100% 存储本地 — 零数据上传${NC}"
 echo ""
+
+# ─── 自动启动 KeepThinking ────────────────────
+echo -e "${BL}🚀 正在启动 KeepThinking...${NC}"
+nohup node "$INSTALL_DIR/server/server.js" > "$INSTALL_DIR/keepthinking.log" 2>&1 &
+sleep 3
+
+# Verify startup
+if curl -s http://localhost:3456/api/health > /dev/null 2>&1; then
+  echo -e "  ${GR}✅ KeepThinking v$VERSION 已启动！${NC}"
+  echo -e "  ${GR}   Web 控制台: http://localhost:3456${NC}"
+  echo -e "  ${GR}   公网地址: http://\$(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_IP'):3456${NC}"
+  echo -e "  ${GR}   systemctl --user enable keepthinking   # 设置开机自启${NC}"
+else
+  echo -e "  ${YL}⚠️ 自动启动失败，请手动启动:${NC}"
+  echo -e "  ${YL}   node $INSTALL_DIR/server/server.js${NC}"
+fi
+echo ""

@@ -217,12 +217,22 @@ document.getElementById('pwd').addEventListener('keydown',e=>{if(e.key==='Enter'
 app.use((req, res) => res.status(404).json({ error: "Not found", path: req.path }));
 
 // ─── Start ─────────────────────────────────────────────────────
-app.listen(PORT, HOST, () => {
+app.listen(PORT, HOST, async () => {
   console.log("[keepthinking-server] v7.2.0 — http://" + HOST + ":" + PORT);
   console.log("[keepthinking-server] Data: " + engine.BASE);
   console.log("[keepthinking-server] Web: " + webDir);
   if (hasPassword) console.log("[keepthinking-server] Auth: password protected");
   engine.startEnvHealer();
+  // Auto-discover existing memories on first run
+  if (engine.getStats().nodes === 0) {
+    try {
+      const discover = require("../engine-discover.js");
+      const report = await discover.runDiscovery(engine, process.env.HOME || "/root");
+      console.log("[keepthinking-server] Auto-discovery: " + report.decisionsImported + " decisions, " + report.gitProjectsFound + " projects");
+    } catch(e) {
+      console.log("[keepthinking-server] Auto-discovery skipped: " + e.message);
+    }
+  }
   const stats = engine.getStats();
   console.log("[keepthinking-server] Graph: " + stats.nodes + " nodes, " + stats.edges + " edges");
 });

@@ -2,8 +2,8 @@
 # KeepThinking v7.2.0 — One-Click Install Script
 # AI Developer Local Cognitive Engine
 # v7.2.0: 无损安装 + 自动记忆发现引擎
-# Usage: curl -fsSL https://cd.xuanjifu.com/downloads/install-keepthinking.sh | bash
-#    or: wget -qO- https://cd.xuanjifu.com/downloads/install-keepthinking.sh | bash
+# Usage: curl -fsSL https://keepthinking.vip/install.sh | bash
+#    or: wget -qO- https://keepthinking.vip/install.sh | bash
 #    or: bash install.sh (from extracted tarball)
 
 set -e
@@ -36,7 +36,7 @@ echo ""
 echo -e "  ${BOLD}继续安装即表示您同意以上条款。${NC}"
 
 VERSION="7.2.0"
-DOWNLOAD_BASE="https://cd.xuanjifu.com/downloads"
+DOWNLOAD_BASE="https://keepthinking.vip/downloads"
 TARBALL="keepthinking-v${VERSION}.tar.gz"
 INSTALL_DIR="${KEEPTHINKING_HOME:-$HOME/.keepthinking}"
 
@@ -137,7 +137,9 @@ if [ "$MODE" = "download" ]; then
     echo -e "${BLUE}[3/8]${NC} 解压安装包..."
     mkdir -p "$TMP_DIR/extracted"
     tar xzf "$TMP_DIR/$TARBALL" -C "$TMP_DIR/extracted"
-    SRC_DIR="$TMP_DIR/extracted/v7"
+    # Auto-detect extracted directory name
+    SRC_DIR=$(ls -d "$TMP_DIR/extracted"/*/ | head -1)
+    [ -z "$SRC_DIR" ] && { echo -e "${RED}解压失败：未找到安装目录${NC}"; exit 1; }
 fi
 
 # ─── 新 Step: 检测已有数据 (无损安装) ─────────────────────────

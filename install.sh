@@ -425,7 +425,8 @@ sleep 3
 if curl -s http://localhost:3456/api/health > /dev/null 2>&1; then
   echo -e "  ${GR}✅ KeepThinking v$VERSION 已启动！${NC}"
   echo -e "  ${GR}   Web 控制台: http://localhost:3456${NC}"
-  echo -e "  ${GR}   公网地址: http://\$(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_IP'):3456${NC}"
+  PUBLIC_IP=$(curl -s ifconfig.me 2>/dev/null || echo "YOUR_IP")
+  echo -e "  ${GR}   公网地址: http://${PUBLIC_IP}:3456${NC}"
   echo -e "  ${GR}   systemctl --user enable keepthinking   # 设置开机自启${NC}"
 else
   echo -e "  ${YL}⚠️ 自动启动失败，请手动启动:${NC}"

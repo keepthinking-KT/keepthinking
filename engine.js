@@ -444,11 +444,35 @@ function buildCognitiveContext() {
     ctx += "## ⚠️ 代码审查提醒\n最近高频修复 Bug，建议本次改动后检查：空值保护、mounted 检查、异步异常处理\n\n";
   }
   
-  // Git integration (v7.1.0)
+  // Git integration (v7.1.0) — auto-discover projects from cognitive graph
   try {
-    const gitCtx = readGitContext(20);
-    if (gitCtx && ctx.length + gitCtx.length < CFG.injectChars) {
-      ctx += gitCtx;
+    const projects = new Set(g.nodes.map(n => n.project).filter(Boolean));
+    const { execSync } = require("child_process");
+    const homeDir = process.env.HOME || "/root";
+    let gitAdded = false;
+    for (const proj of projects) {
+      if (ctx.length > CFG.injectChars) break;
+      const possiblePaths = [
+        homeDir + "/workspaces/" + proj,
+        homeDir + "/workspaces/kongming/" + proj,
+        "/opt/" + proj,
+      ];
+      for (const p of possiblePaths) {
+        try {
+          execSync("git rev-parse --git-dir", { cwd: p, stdio: "pipe", timeout: 1000 });
+          const gitCtx = readGitContext(15, p);
+          if (gitCtx && ctx.length + gitCtx.length < CFG.injectChars) {
+            ctx += gitCtx;
+            gitAdded = true;
+          }
+          break;
+        } catch (_) { /* not a git repo at this path */ }
+      }
+    }
+    // Fallback: current directory
+    if (!gitAdded) {
+      const gitCtx = readGitContext(10);
+      if (gitCtx && ctx.length + gitCtx.length < CFG.injectChars) ctx += gitCtx;
     }
   } catch (_) {}
 
@@ -563,10 +587,10 @@ function listProjects() {
 //  Reads local Git history for developer context
 // ══════════════════════════════════════════════════════════════
 
-function readGitContext(maxCommits) {
+function readGitContext(maxCommits, workDir) {
   try {
     const { execSync } = require("child_process");
-    const cwd = process.cwd();
+    const cwd = workDir || process.cwd();
     
     try {
       execSync("git rev-parse --git-dir", { cwd, stdio: "pipe", timeout: 2000 });
@@ -869,7 +893,7 @@ module.exports = {
   extractDecisions, DECISION_PATTERNS,
 
   // Context builder
-  buildCognitiveContext, fmtInjection,
+  buildCognitiveContext, fmtInjection, readGitContext,
 
   // Env healer
   runEnvCheck, startEnvHealer, stopEnvHealer, getDiskFreeGB, getMemoryFreeMB,

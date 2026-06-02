@@ -538,7 +538,7 @@ function getStats() {
   const exps = loadExps();
   const decs = loadDecs();
   return {
-    version: "7.1.0",
+    version: "7.2.0",
     nodes: (g.nodes || []).length,
     edges: (g.edges || []).length,
     experiences: exps.length,

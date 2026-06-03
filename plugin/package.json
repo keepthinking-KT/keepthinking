@@ -13,7 +13,15 @@
     "hooks": "./keepthinking.js",
     "extensions": [
       "./keepthinking.js"
-    ]
+    ],
+    "compat": {
+      "pluginApi": ">=2026.5.12",
+      "minGatewayVersion": "2026.5.12"
+    },
+    "build": {
+      "openclawVersion": "2026.5.12",
+      "pluginSdkVersion": "2026.5.12"
+    }
   },
   "license": "MIT",
   "publishConfig": {

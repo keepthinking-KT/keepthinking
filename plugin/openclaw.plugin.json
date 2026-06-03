@@ -1,0 +1,64 @@
+{
+  "id": "keepthinking",
+  "name": "Keepthinking",
+  "description": "Developer Cognitive Engine for OpenClaw — cognitive graph + auto-injection + MCP Server",
+  "version": "6.0.0",
+  "format": "openclaw",
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": []
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true
+      },
+      "experienceDir": {
+        "type": "string",
+        "default": "memory/experiences"
+      },
+      "maxExperienceAgeDays": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 365,
+        "default": 90
+      },
+      "maxExperiencesPerLoad": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20,
+        "default": 5
+      },
+      "minSubagentDurationMs": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 3000
+      },
+      "promptInjectionChars": {
+        "type": "integer",
+        "minimum": 100,
+        "maximum": 3000,
+        "default": 1200
+      }
+    }
+  },
+  "uiHints": {
+    "enabled": {
+      "label": "Enable",
+      "help": "Enable automatic memory archiving"
+    },
+    "maxExperienceAgeDays": {
+      "label": "Retention (days)",
+      "help": "Auto-archive experiences older than this"
+    },
+    "promptInjectionChars": {
+      "label": "Injection limit",
+      "help": "Max characters to inject into prompts"
+    }
+  }
+}

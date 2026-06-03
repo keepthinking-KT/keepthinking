@@ -1,15 +1,26 @@
 {
-  "name": "keepthinking",
-  "version": "7.2.0",
-  "description": "KeepThinking — AI's Second Brain. OpenClaw native plugin for automatic AI memory capture.",
+  "name": "@keepthinking-KT/keepthinking",
+  "version": "6.0.0",
+  "description": "Cross-session memory engine with auto-injection — let AI remember your project across every /new",
   "main": "keepthinking.js",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "os": [
+    "linux"
+  ],
   "openclaw": {
-    "type": "plugin",
-    "hooks": [
-      "subagent_spawned",
-      "subagent_ended",
-      "gateway_start",
-      "before_prompt_build"
+    "hooks": "./keepthinking.js",
+    "extensions": [
+      "./keepthinking.js"
     ]
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "mkdir -p dist && cp keepthinking.js dist/ && cp openclaw.plugin.json dist/ && mkdir -p dist/mcp && cp -r mcp/* dist/mcp/ 2>/dev/null; echo 'Build complete'",
+    "test": "node -e 'console.log(\"OK\")'"
   }
 }

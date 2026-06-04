@@ -1080,9 +1080,11 @@ async function collectGitProjects() {
 async function runCollectLoop() {
   _lastCollectAt = Date.now();
   loadCollectState();
+  let sessImp = 0;
   
   try {
     const sessionResult = await collectSessions();
+    sessImp = sessionResult.imported;
     console.log("[keepthinking-collect] Sessions: " + sessionResult.found + " files, " + sessionResult.imported + " decisions");
   } catch (e) {
     console.error("[keepthinking-collect] Session error:", e.message);
@@ -1092,7 +1094,7 @@ async function runCollectLoop() {
     const gitResult = await collectGitProjects();
     console.log("[keepthinking-collect] Git: " + gitResult.found + " projects, " + gitResult.imported + " decisions");
     const s = getStats();
-    return { sessions: sessionResult.imported, git: gitResult.imported, nodes: s.nodes, edges: s.edges };
+    return { sessions: sessImp, git: gitResult.imported, nodes: s.nodes, edges: s.edges };
   } catch (e) {
     console.error("[keepthinking-collect] Git error:", e.message);
     return { sessions: 0, git: 0, nodes: getStats().nodes, edges: getStats().edges };
@@ -1101,6 +1103,7 @@ async function runCollectLoop() {
 
 function startCollectLoop(intervalMs) {
   loadCollectState();
+  let sessImp = 0;
   const ms = intervalMs || 600000; // default 10 min
   if (_collectTimer) clearInterval(_collectTimer);
   console.log("[keepthinking-collect] Auto-collect loop started (every " + (ms/60000) + "min)");

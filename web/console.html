@@ -364,7 +364,6 @@
     <button onclick="triggerCollect()" style="padding:6px 16px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">🔄 立即抓取</button>
     <span id="collect-status" style="color:var(--text-muted);font-size:12px"></span>
   </div>
-  <div id="collect-log" style="font-size:11px;color:var(--text-muted)"></div>
 </div>
 
 <h3>📂 项目列表</h3>
@@ -498,7 +497,7 @@ async function loadStats() {
 }
 
 // Load graph
-async let currentFilter = '';
+let currentFilter = '';
 
 function loadGraph() {
   try {
@@ -512,11 +511,7 @@ function loadGraph() {
       html += '<div style="margin-bottom:8px"><select id="projFilter" onchange="currentFilter=this.value;loadGraph();" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:0.8rem"><option value="">全部项目</option></select></div>';
   html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'nodeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▼ 🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
       html += '<div id="nodeList">';
-      // Fill project filter
-    const projs = [...new Set(nodes.map(n => n.project||''))];
-    projs.forEach(p => { if(p) document.getElementById('projFilter').innerHTML += '<option value="'+p+'">'+p+'</option>'; });
-    document.getElementById('projFilter').value = currentFilter;
-    for (const n of nodes) {
+      for (const n of nodes) {
         if (currentFilter && n.project !== currentFilter) continue;
         const srcColor = n.source === 'auto-collect' ? '#238636' : n.source === 'auto-prompt' ? '#a371f7' : '#666';
         const srcLabel = n.source === 'auto-collect' ? '自动' : n.source === 'auto-prompt' ? '插件' : n.source === 'manual' ? '手动' : (n.source || '其他');
@@ -547,6 +542,15 @@ function loadGraph() {
     }
 
     container.innerHTML = html;
+    // Fill project filter after DOM is ready
+    setTimeout(() => {
+      const pf = document.getElementById('projFilter');
+      if (pf && nodes.length) {
+        const projs = [...new Set(nodes.map(n => n.project||''))];
+        projs.forEach(p => { if(p) pf.innerHTML += '<option value="'+p+'">'+p+'</option>'; });
+        pf.value = currentFilter;
+      }
+    }, 100);
   } catch (e) {
     document.getElementById('graphContent').innerHTML = '<div class="error-banner">加载图谱失败: ' + e.message + '</div>';
     console.error('Graph error:', e);

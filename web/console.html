@@ -386,7 +386,7 @@
 // Use same origin as page (works for localhost, LAN IP, or public IP)
 const API = window.location.origin + "/kt"; let SESSION_TOKEN = "";
 
-function GET(path) { const API = window.location.origin + "/kt";
+function GET(path) {
   const h = {};
   if (SESSION_TOKEN) h["Authorization"] = "Bearer " + SESSION_TOKEN;
   return fetch(API + path, { headers: h })

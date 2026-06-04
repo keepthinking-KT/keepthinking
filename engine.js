@@ -28,7 +28,7 @@ const DEC_FILE = path.join(MEM_DIR, "decisions.json");
 
 // ─── Config ──────────────────────────────────────────────────
 const CFG = {
-  maxNodes: 100000, maxEdges: 500000, maxInject: 100, injectChars: 4000,
+  maxNodes: 100000, maxEdges: 500000, maxInject: 100, injectChars: 6000,
   archiveDays: 90, minTaskMs: 3000, decayWindow: 7, decayHalfLife: 30, minWeight: 0.1,
   diskMinGB: 7, memoryMinMB: 500, checkIntervalMs: 1800000,
 };

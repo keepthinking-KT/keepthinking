@@ -455,6 +455,7 @@ async function triggerC() {
   }
   btn.disabled = false; btn.textContent = "立即抓取";
   loadAll(); loadC();
+    setInterval(() => { loadAll(); loadC(); }, 10000);
 }
 
 // Update status dot

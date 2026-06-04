@@ -106,8 +106,10 @@ module.exports = function keepthinking(config) {
           try {
             const g = engine.loadGraph();
             const decisions = engine.extractDecisions(sessionText, 5);
+            let collectCount = 0;
             for (const d of decisions) {
-              engine.addNode(g, d.label, d.project || "general", d.tags, d.context, {
+              if (collectCount >= 5) break;  // max 5 nodes per turn
+              collectCount++; engine.addNode(g, d.label, d.project || "general", d.tags, d.context, {
                 source: "auto-prompt",
                 type: d.type,
                 weight: d.confidence ? Math.min(d.confidence * 4, 4) : 2,

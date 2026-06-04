@@ -138,9 +138,22 @@ function addNode(g, label, project, tags, context, opts) {
   };
   g.nodes = g.nodes || [];
   
-  // Deduplicate: same label + same project = merge (unless source forces unique)
+  // Deduplicate: same label+project or fuzzy match >80% similarity
   if (o.source !== "git-commit") {
-    const existing = g.nodes.find(n => n.label === label && n.project === project);
+    let existing = g.nodes.find(n => n.label === label && n.project === project);
+    // Fuzzy: if label shares >80% common words with an existing node in same project
+    if (!existing) {
+      const words = label.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      if (words.length >= 3) {
+        existing = g.nodes.find(n => {
+          if (n.project !== project) return false;
+          const otherWords = (n.label || "").toLowerCase().split(/\s+/).filter(w => w.length > 2);
+          if (otherWords.length < 3) return false;
+          const common = words.filter(w => otherWords.includes(w));
+          return common.length / Math.min(words.length, otherWords.length) > 0.8;
+        });
+      }
+    }
     if (existing) {
       existing.weight = (existing.weight || 1) + 0.2;
       existing.time = nowISO();
@@ -874,8 +887,8 @@ function extractDecisions(text, maxResults = 10) {
       if (!tags.includes("auto-extract")) tags.push("auto-extract");
       
       results.push({
-        label: snippet.slice(0, 60),
-        context: snippet.slice(0, 150),
+        label: snippet.slice(0, 200),
+        context: snippet.slice(0, 300),
         type: ext.type,
         project: project,
         tags: tags.slice(0, 6),

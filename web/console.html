@@ -501,7 +501,7 @@ async function loadStats() {
 // Load graph
 let currentFilter = '';
 
-function loadGraph() {
+async function loadGraph() {
   try {
     const g = await GET('/api/graph?maxNodes=30');
     const container = document.getElementById('graphContent');

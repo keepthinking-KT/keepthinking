@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KeepThinking 认知引擎 v7.2.0</title>
+<title>KeepThinking 认知引擎 v7.2.1</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -304,7 +304,7 @@
 <header>
   <h1>
     🧠 KeepThinking 认知引擎
-    <span class="badge">v7.2.0</span>
+    <span class="badge">v7.2.1</span>
     <span class="status-dot online" id="statusDot" title="API Status"></span>
   </h1>
   <span style="font-size:0.75rem;color:var(--text-muted);">AI Developer Local Cognitive Engine</span>
@@ -501,29 +501,30 @@ async function loadGraph() {
 
     let html = '';
     if (nodes.length) {
-      html += '<div class="graph-section"><div class="graph-section-title">🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
+      html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'nodeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▼ 🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
+      html += '<div id="nodeList">';
       for (const n of nodes) {
         const srcColor = n.source === 'auto-collect' ? '#238636' : n.source === 'auto-prompt' ? '#a371f7' : '#666';
         const srcLabel = n.source === 'auto-collect' ? '自动' : n.source === 'auto-prompt' ? '插件' : n.source === 'manual' ? '手动' : (n.source || '其他');
-        html += '<div class="node-item">';
-        html += '<span class="node-id">' + (n.id || '') + '</span>';
-        html += '<span>' + (n.label || '').slice(0, 80) + '</span>';
-        html += '<span style="margin-left:auto;font-size:0.7rem;display:flex;gap:6px;align-items:center">';
-        html += '<span style="color:' + srcColor + ';border:1px solid ' + srcColor + ';border-radius:3px;padding:0 4px;font-size:0.6rem">' + srcLabel + '</span>';
-        html += '<span style="color:var(--text-muted);">' + (n.project || '') + '</span>';
-        html += '</span></div>';
+        html += '<div class="node-item" style="padding:8px 10px;margin:4px 0;border-radius:6px;background:var(--bg);border:1px solid var(--border)">';
+        html += '<span class="node-id" style="opacity:0.5">' + (n.id || '').slice(0,12) + '</span> ';
+        html += '<span style="color:' + srcColor + ';border:1px solid ' + srcColor + ';border-radius:3px;padding:0 5px;font-size:0.65rem;margin-right:6px">' + srcLabel + '</span>';
+        html += '<span style="font-size:0.85rem">' + (n.label || '').slice(0, 100) + '</span>';
+        html += '<span style="float:right;color:var(--text-muted);font-size:0.7rem">' + (n.project || '') + '</span>';
+        html += '</div>';
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
     if (edges.length) {
-      html += '<div class="graph-section"><div class="graph-section-title">🔗 边 (' + edges.length + ')</div>';
+      html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'edgeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▶ 🔗 边 (' + edges.length + ')</div>';
+      html += '<div id="edgeList" style="display:none">';
       for (const e of edges) {
         const fromLabel = (nodes.find(n => n.id === e.from) || {}).label || e.from;
         const toLabel = (nodes.find(n => n.id === e.to) || {}).label || e.to;
         html += '<div class="edge-item">' + (fromLabel || e.from).slice(0, 30) + ' → ' + (toLabel || e.to).slice(0, 30) + ' <span style="color:#a371f7;">[' + (e.relation || '') + ']</span></div>';
       }
-      html += '</div>';
+      html += '</div></div>';
     }
 
     if (!nodes.length && !edges.length) {

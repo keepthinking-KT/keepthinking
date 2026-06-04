@@ -152,10 +152,17 @@ function addNode(g, label, project, tags, context, opts) {
   
   g.nodes.push(node);
   
-  // Auto-create edges: same tags or same project
+  // Auto-create edges: same tags or same project (max 10 edges per node)
   (g.edges = g.edges || []);
-  for (const other of g.nodes) {
-    if (other.id === id) continue;
+  let edgeCount = 0;
+  const MAX_EDGES = 10;
+  // Prioritize recent nodes (reverse order), same-project first, then shared-tags
+  const candidates = g.nodes.filter(n => n.id !== id).reverse();
+  const sameProj = candidates.filter(n => n.project === project);
+  const otherProj = candidates.filter(n => n.project !== project);
+  const ordered = [...sameProj, ...otherProj];
+  for (const other of ordered) {
+    if (edgeCount >= MAX_EDGES) break;
     const sharedTags = (node.tags || []).filter(t => (other.tags || []).includes(t));
     if (sharedTags.length > 0 || other.project === project) {
       const edgeId = "e" + gid();
@@ -163,6 +170,7 @@ function addNode(g, label, project, tags, context, opts) {
       const edgeWeight = sharedTags.length * 0.3 + (other.project === project ? 0.5 : 0);
       if (!g.edges.some(e => (e.from === id && e.to === other.id) || (e.from === other.id && e.to === id))) {
         g.edges.push({ id: edgeId, from: id, to: other.id, relation, weight: Math.min(edgeWeight, 1.0) });
+        edgeCount++;
       }
     }
   }
@@ -844,8 +852,7 @@ function extractDecisions(text, maxResults = 10) {
     { re: /(?:配置了|设置了|安装了|启动了|测试了|验证了|诊断了|检查了|审计了|优化了|调整了|修改了|更新了|同步了|备份了|恢复了|迁移了|打包了|发布了|上传|下载|编译|构建|部署)[：:]*\s*(.+)/i, type: 'action' },
     // Problem/solution: 问题/根因/原因/结论/方案/措施/策略/建议/决定 + 是/在于
     { re: /(?:问题|根因|原因|结论|方案|措施|策略|建议|决定|选择)[：:是]*\s*(.+)/i, type: 'insight' },
-    // Tech keyword sentences: any sentence with key tech terms
-    { re: /(?:.+?(?:API|CDN|SSL|DNS|Nginx|Node\.js|npm|systemd|iptables|tarball|install|deploy|config|engine|server|plugin|hook|MCP|ONNX|Flutter|App\s*Store|TestFlight|IAP|备案|ICP|SSH|防火墙|安全组|GitHub|Git|Express|向量|embed).+)/i, type: 'tech' },
+
   ];
   
   for (const sent of sentences) {

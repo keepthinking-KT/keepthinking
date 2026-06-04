@@ -372,7 +372,10 @@
 
 <script>
 // Use same origin as page (works for localhost, LAN IP, or public IP)
-const API = window.location.origin + "/kt"; let SESSION_TOKEN = "";
+// v7.3.0: detect whether we're behind xuanjifu.com/kt reverse proxy or direct access
+const _isProxy = window.location.pathname.startsWith("/kt");
+const API = _isProxy ? window.location.origin + "/kt" : window.location.origin;
+let SESSION_TOKEN = "";
 
 function GET(path) {
   const h = {};

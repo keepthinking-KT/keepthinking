@@ -503,11 +503,15 @@ async function loadGraph() {
     if (nodes.length) {
       html += '<div class="graph-section"><div class="graph-section-title">🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
       for (const n of nodes) {
+        const srcColor = n.source === 'auto-collect' ? '#238636' : n.source === 'auto-prompt' ? '#a371f7' : '#666';
+        const srcLabel = n.source === 'auto-collect' ? '自动' : n.source === 'auto-prompt' ? '插件' : n.source === 'manual' ? '手动' : (n.source || '其他');
         html += '<div class="node-item">';
         html += '<span class="node-id">' + (n.id || '') + '</span>';
         html += '<span>' + (n.label || '').slice(0, 80) + '</span>';
-        html += '<span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">' + (n.project || '') + '</span>';
-        html += '</div>';
+        html += '<span style="margin-left:auto;font-size:0.7rem;display:flex;gap:6px;align-items:center">';
+        html += '<span style="color:' + srcColor + ';border:1px solid ' + srcColor + ';border-radius:3px;padding:0 4px;font-size:0.6rem">' + srcLabel + '</span>';
+        html += '<span style="color:var(--text-muted);">' + (n.project || '') + '</span>';
+        html += '</span></div>';
       }
       html += '</div>';
     }

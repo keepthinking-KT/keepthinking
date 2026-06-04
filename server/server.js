@@ -99,7 +99,7 @@ app.post("/api/nodes/clean", (req, res) => {
 // ─── Collect API ──────────────────────────────────────────────
 app.get("/api/collect/config", (req, res) => { res.json({ intervalMs: collectIntervalMs, intervalMin: Math.round(collectIntervalMs / 60000) }); });
 app.put("/api/collect/config", (req, res) => { const m = req.body.intervalMin; if (!m || m < 1 || m > 1440) return res.status(400).json({ e: "1-1440 min" }); collectIntervalMs = m * 60000; engine.stopCollectLoop(); engine.startCollectLoop(collectIntervalMs); res.json({ ok: true }); });
-app.post("/api/collect/trigger", async (req, res) => { try { await engine.runCollectLoop(); res.json({ ok: true, nodes: engine.getStats().nodes }); } catch (e) { res.status(500).json({ e: e.message }); } });
+app.post("/api/collect/trigger", async (req, res) => { try { const r = await engine.runCollectLoop(); res.json({ ok: true, nodes: r.nodes, sessions: r.sessions, git: r.git }); } catch (e) { res.status(500).json({ e: e.message }); } });
 
 // ─── API Endpoints ─────────────────────────────────────────────
 app.get("/api/health", (req, res) => {

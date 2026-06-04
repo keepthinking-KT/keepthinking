@@ -1073,8 +1073,11 @@ async function runCollectLoop() {
   try {
     const gitResult = await collectGitProjects();
     console.log("[keepthinking-collect] Git: " + gitResult.found + " projects, " + gitResult.imported + " decisions");
+    const s = getStats();
+    return { sessions: sessionResult.imported, git: gitResult.imported, nodes: s.nodes, edges: s.edges };
   } catch (e) {
     console.error("[keepthinking-collect] Git error:", e.message);
+    return { sessions: 0, git: 0, nodes: getStats().nodes, edges: getStats().edges };
   }
 }
 

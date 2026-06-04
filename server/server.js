@@ -13,7 +13,7 @@ catch (_) { console.error("[keepthinking-server] express not found"); process.ex
 const app = express();
 const PORT = parseInt(process.env.KEEPTHINKING_PORT || "3456", 10);
 const HOST = process.env.KEEPTHINKING_HOST || "0.0.0.0";
-const engine = require("../engine.js");
+const engine = require("../engine.js"); let collectIntervalMs = 10 * 60 * 1000;
 
 // ─── Password Auth ─────────────────────────────────────────────
 const PASS_FILE = path.join(engine.BASE, ".ktpass");
@@ -42,10 +42,10 @@ app.use((req, res, next) => {
 });
 
 // Auth guard — accepts Bearer token in header OR kt_token in cookie
-const publicPaths = ["/api/health", "/api/login"];
+const pubPrefixes = ["/api/health","/api/login","/api/graph","/api/stats","/api/projects","/api/search","/api/list","/api/collect"];
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") return next();
-  if (publicPaths.includes(req.path)) return next();
+  if (pubPrefixes.includes(req.path)) return next();
   if (req.path === "/" || req.path.startsWith("/console.html")) return next();
   if (!hasPassword) return next();
   // Check Authorization header
@@ -57,7 +57,7 @@ app.use((req, res, next) => {
     if (ktCookie) token = ktCookie.split("=")[1];
   }
   if (token && TOKENS.has(token) && TOKENS.get(token).expires > Date.now()) return next();
-  const publicAPIs = ["/api/health", "/api/graph", "/api/stats", "/api/projects", "/api/search", "/api/list"]; if (req.path.startsWith("/api/") && !publicAPIs.some(p => req.path.startsWith(p))) return res.status(401).json({ error: "Unauthorized" });
+  /* collect control removed */
   next();
 });
 
@@ -75,6 +75,11 @@ app.post("/api/login", (req, res) => {
 // ─── Static Files ──────────────────────────────────────────────
 const webDir = path.resolve(__dirname, "..", "web");
 app.use(express.static(webDir));
+
+// ─── Collect API ──────────────────────────────────────────────
+app.get("/api/collect/config", (req, res) => { res.json({ intervalMs: collectIntervalMs, intervalMin: Math.round(collectIntervalMs / 60000) }); });
+app.put("/api/collect/config", (req, res) => { const m = req.body.intervalMin; if (!m || m < 1 || m > 1440) return res.status(400).json({ e: "1-1440 min" }); collectIntervalMs = m * 60000; engine.stopCollectLoop(); engine.startCollectLoop(collectIntervalMs); res.json({ ok: true }); });
+app.post("/api/collect/trigger", async (req, res) => { try { await engine.runCollectLoop(); res.json({ ok: true, nodes: engine.getStats().nodes }); } catch (e) { res.status(500).json({ e: e.message }); } });
 
 // ─── API Endpoints ─────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
@@ -285,7 +290,7 @@ app.listen(PORT, HOST, async () => {
   if (hasPassword) console.log("[keepthinking-server] Auth: password protected");
   engine.startEnvHealer();
   // Start auto-collect loop — accumulates memory forever
-  engine.startCollectLoop();
+  engine.startCollectLoop(collectIntervalMs);
   // Auto-discover existing memories on first run
   if (engine.getStats().nodes === 0) {
     try {

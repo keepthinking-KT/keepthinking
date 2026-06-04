@@ -324,7 +324,20 @@
 
   <!-- Search -->
   <div class="card" style="grid-column: span 2;">
-    <h3>🔍 记忆搜索</h3>
+    <h3>⚙️ 自动采集</h3>
+<div id="collect-panel" style="margin-bottom:20px;padding:14px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+    <span style="color:var(--text-muted);font-size:13px">间隔:</span>
+    <select id="ci" onchange="updateCI()" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px">
+      <option value="1">1 分钟</option><option value="5">5 分钟</option><option value="10" selected>10 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option>
+    </select>
+    <button onclick="triggerC()" id="ctbtn" style="padding:5px 14px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">立即抓取</button>
+    <span id="cst" style="color:var(--text-muted);font-size:12px"></span>
+  </div>
+  <div id="clog" style="font-size:11px;color:var(--text-muted)"></div>
+</div>
+
+<h3>🔍 记忆搜索</h3>
     <input type="text" class="search-box" id="searchInput" placeholder="输入关键词搜索记忆..." autocomplete="off">
     <div class="results-list" id="searchResults">
       <div class="empty">输入关键词开始搜索认知图谱和记忆</div>
@@ -341,7 +354,20 @@
 
   <!-- Projects -->
   <div class="card full-width">
-    <h3>📂 项目列表</h3>
+    <h3>⚙️ 自动采集</h3>
+<div id="collect-panel" style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+    <span style="color:var(--text-muted);font-size:13px">间隔:</span>
+    <select id="collect-interval" onchange="updateCollectInterval()" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px">
+      <option value="1">1 分钟</option><option value="5">5 分钟</option><option value="10" selected>10 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option>
+    </select>
+    <button onclick="triggerCollect()" style="padding:6px 16px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">🔄 立即抓取</button>
+    <span id="collect-status" style="color:var(--text-muted);font-size:12px"></span>
+  </div>
+  <div id="collect-log" style="font-size:11px;color:var(--text-muted)"></div>
+</div>
+
+<h3>📂 项目列表</h3>
     <div style="overflow-x: auto;">
       <table class="project-table" id="projectTable">
         <thead><tr><th>项目</th><th>节点</th><th>决策</th><th>经验</th><th>最后活跃</th></tr></thead>
@@ -364,6 +390,71 @@ const API = window.location.origin;
 function GET(path) {
   return fetch(API + path)
     .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.json(); });
+}
+
+async function loadCollectConfig() {
+  try {
+    const r = await GET("/api/collect/config");
+    const sel = document.getElementById("collect-interval");
+    if (sel) sel.value = String(r.intervalMin);
+    const st = document.getElementById("collect-status");
+    if (st && r.lastCollect && r.lastCollect.time) {
+      const t = new Date(r.lastCollect.time);
+      st.textContent = `上次: ${t.toLocaleTimeString()} (节点:${r.lastCollect.nodes||"?"})`;
+    }
+  } catch(_) {}
+}
+async function updateCollectInterval() {
+  const v = document.getElementById("collect-interval").value;
+  await fetch(API + "/api/collect/config", {
+    method: "PUT",
+    headers: {"Content-Type":"application/json", ...(SESSION_TOKEN?{"Authorization":"Bearer "+SESSION_TOKEN}:{})},
+    body: JSON.stringify({intervalMin: parseInt(v)})
+  });
+  loadCollectConfig();
+}
+async function triggerCollect() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "⏳ 抓取中...";
+  const r = await fetch(API + "/api/collect/trigger", {
+    method: "POST",
+    headers: {...(SESSION_TOKEN?{"Authorization":"Bearer "+SESSION_TOKEN}:{})}
+  }).then(r=>r.json());
+  document.getElementById("collect-log").textContent = `✅ 抓取完成 (${new Date().toLocaleTimeString()}) — 节点:${r.result?.nodes||"?"}`;
+  btn.disabled = false; btn.textContent = "🔄 立即抓取";
+  loadCollectConfig(); loadAll(); loadCollectConfig();
+}
+
+async function loadC() {
+  try {
+    const r = await GET("/api/collect/config");
+    const s = document.getElementById("ci");
+    if (s) s.value = String(r.intervalMin);
+  } catch(_) {}
+}
+async function updateCI() {
+  const v = parseInt(document.getElementById("ci").value);
+  await fetch(API + "/api/collect/config", {
+    method: "PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({intervalMin: v})
+  });
+  loadC();
+}
+async function triggerC() {
+  const btn = document.getElementById("ctbtn");
+  btn.disabled = true; btn.textContent = "抓取中...";
+  try {
+    const r = await fetch(API + "/api/collect/trigger", { method: "POST" }).then(r=>r.json());
+    const s = document.getElementById("cst");
+    const now = new Date().toLocaleTimeString();
+    if (s) s.textContent = `上次: ${now} (节点:${r.nodes})`;
+    document.getElementById("clog").textContent = `✅ ${now} — 节点数: ${r.nodes}`;
+  } catch(e) {
+    document.getElementById("clog").textContent = `❌ 抓取失败: ${e.message}`;
+  }
+  btn.disabled = false; btn.textContent = "立即抓取";
+  loadAll(); loadC();
 }
 
 // Update status dot

@@ -331,7 +331,7 @@
     <select id="ci" onchange="updateCI()" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px">
       <option value="1">1 分钟</option><option value="5">5 分钟</option><option value="10" selected>10 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option>
     </select>
-    <button onclick="triggerC()" id="ctbtn" style="padding:5px 14px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">立即抓取</button>
+    <button onclick="cleanNodes()" style="padding:5px 14px;border-radius:4px;background:#da3633;color:#fff;border:1px solid #f85149;font-size:13px;cursor:pointer;margin-right:6px">清理低质量</button><button onclick="triggerC()" id="ctbtn" style="padding:5px 14px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">立即抓取</button>
     <span id="cst" style="color:var(--text-muted);font-size:12px"></span>
   </div>
   <div id="clog" style="font-size:11px;color:var(--text-muted)"></div>
@@ -441,6 +441,12 @@ async function updateCI() {
   });
   loadC();
 }
+async function cleanNodes() {
+  if (!confirm('删除 source=auto-collect 且 weight<1.5 的低质量节点？')) return;
+  const r = await fetch(API + "/api/nodes/clean", { method: "POST" }).then(r=>r.json());
+  document.getElementById("clog").textContent = `✅ 清理完成 — 删除:${r.removed} 剩余节点:${r.nodes} 边:${r.edges}`;
+  loadAll(); loadC();
+}
 async function triggerC() {
   const btn = document.getElementById("ctbtn");
   btn.disabled = true; btn.textContent = "抓取中...";
@@ -492,7 +498,9 @@ async function loadStats() {
 }
 
 // Load graph
-async function loadGraph() {
+async let currentFilter = '';
+
+function loadGraph() {
   try {
     const g = await GET('/api/graph?maxNodes=30');
     const container = document.getElementById('graphContent');
@@ -501,12 +509,18 @@ async function loadGraph() {
 
     let html = '';
     if (nodes.length) {
-      html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'nodeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▼ 🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
+      html += '<div style="margin-bottom:8px"><select id="projFilter" onchange="currentFilter=this.value;loadGraph();" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:0.8rem"><option value="">全部项目</option></select></div>';
+  html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'nodeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▼ 🗂️ 节点 (' + nodes.length + '/' + (g.nodesTotal || nodes.length) + ')</div>';
       html += '<div id="nodeList">';
-      for (const n of nodes) {
+      // Fill project filter
+    const projs = [...new Set(nodes.map(n => n.project||''))];
+    projs.forEach(p => { if(p) document.getElementById('projFilter').innerHTML += '<option value="'+p+'">'+p+'</option>'; });
+    document.getElementById('projFilter').value = currentFilter;
+    for (const n of nodes) {
+        if (currentFilter && n.project !== currentFilter) continue;
         const srcColor = n.source === 'auto-collect' ? '#238636' : n.source === 'auto-prompt' ? '#a371f7' : '#666';
         const srcLabel = n.source === 'auto-collect' ? '自动' : n.source === 'auto-prompt' ? '插件' : n.source === 'manual' ? '手动' : (n.source || '其他');
-        html += '<div class="node-item" style="padding:8px 10px;margin:4px 0;border-radius:6px;background:var(--bg);border:1px solid var(--border)">';
+        html += '<div class="node-item" style="padding:8px 10px;margin:4px 0;border-radius:6px;background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="showNodeDetail(\'' + n.id + '\')">';
         html += '<span class="node-id" style="opacity:0.5">' + (n.id || '').slice(0,12) + '</span> ';
         html += '<span style="color:' + srcColor + ';border:1px solid ' + srcColor + ';border-radius:3px;padding:0 5px;font-size:0.65rem;margin-right:6px">' + srcLabel + '</span>';
         html += '<span style="font-size:0.85rem">' + (n.label || '').slice(0, 100) + '</span>';
@@ -517,7 +531,8 @@ async function loadGraph() {
     }
 
     if (edges.length) {
-      html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'edgeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▶ 🔗 边 (' + edges.length + ')</div>';
+      html += '<div style="margin-bottom:8px"><select id="projFilter" onchange="currentFilter=this.value;loadGraph();" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:0.8rem"><option value="">全部项目</option></select></div>';
+  html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'edgeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▶ 🔗 边 (' + edges.length + ')</div>';
       html += '<div id="edgeList" style="display:none">';
       for (const e of edges) {
         const fromLabel = (nodes.find(n => n.id === e.from) || {}).label || e.from;
@@ -614,5 +629,19 @@ setInterval(() => {
 }, 30000);
 </script>
 
+<div id="nodeDetail" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:500px;width:90%;color:var(--text)">
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <h3 id="ndLabel" style="margin:0;font-size:1rem"></h3>
+      <button onclick="closeDetail()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">&times;</button>
+    </div>
+    <div style="font-size:0.8rem;line-height:1.8">
+      <div><b>来源：</b><span id="ndSource"></span> | <b>项目：</b><span id="ndProject"></span></div>
+      <div><b>时间：</b><span id="ndTime"></span> | <b>权重：</b><span id="ndWeight"></span></div>
+      <div><b>标签：</b><span id="ndTags"></span> | <b>关联：</b><span id="ndEdges"></span></div>
+      <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:6px;font-size:0.75rem;color:var(--text-muted);max-height:150px;overflow-y:auto"><b>上下文：</b><span id="ndContext"></span></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

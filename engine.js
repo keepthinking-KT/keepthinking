@@ -137,6 +137,9 @@ function addNode(g, label, project, tags, context, opts) {
     metadata: o.metadata || {}
   };
   g.nodes = g.nodes || [];
+
+  // Async compute embedding for semantic dedup
+  embedText(label).then(emb => { node._embedding = emb; }).catch(() => {});
   
   // Deduplicate: same label+project or fuzzy match >80% similarity
   if (o.source !== "git-commit") {
@@ -151,6 +154,16 @@ function addNode(g, label, project, tags, context, opts) {
           if (otherWords.length < 3) return false;
           const common = words.filter(w => otherWords.includes(w));
           return common.length / Math.min(words.length, otherWords.length) > 0.8;
+        });
+      }
+    }
+    // Semantic dedup: via ONNX embedding cosine similarity > 0.85
+    if (!existing) {
+      const emb = node._embedding;
+      if (emb && emb.length > 0) {
+        existing = g.nodes.find(n => {
+          if (n.project !== project || !n._embedding) return false;
+          return cosineSimilarity(emb, n._embedding) > 0.85;
         });
       }
     }
@@ -887,6 +900,11 @@ function extractDecisions(text, maxResults = 10) {
       if (!tags.includes("auto-extract")) tags.push("auto-extract");
       
       results.push({
+        score: Math.min(10, Math.round(
+          (snippet.length > 30 ? 4 : 2) +
+          (ext.type === 'decision' ? 3 : ext.type === 'action' ? 2 : 1) +
+          (meaningfulWords.length > 5 ? 2 : 1)
+        )),
         label: snippet.slice(0, 200),
         context: snippet.slice(0, 300),
         type: ext.type,

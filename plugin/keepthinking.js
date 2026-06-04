@@ -195,7 +195,7 @@ module.exports = function keepthinking(config) {
             metadata: {
               subagentId,
               duration,
-              hookVersion: "7.3.0",
+              hookVersion: "7.2.0",
               taskPreview: task.slice(0, 100),
               resultPreview: result.slice(0, 100),
             },

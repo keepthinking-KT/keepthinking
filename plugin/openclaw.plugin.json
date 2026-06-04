@@ -1,8 +1,8 @@
 {
   "id": "keepthinking",
   "name": "Keepthinking",
-  "description": "Developer Cognitive Engine for OpenClaw — cognitive graph + auto-injection + MCP Server",
-  "version": "6.0.0",
+  "description": "Developer Cognitive Engine for OpenClaw \u2014 cognitive graph + auto-injection + MCP Server",
+  "version": "7.3.0",
   "format": "openclaw",
   "activation": {
     "onStartup": true
@@ -60,5 +60,11 @@
       "label": "Injection limit",
       "help": "Max characters to inject into prompts"
     }
-  }
+  },
+  "hooks": [
+    "gateway_start",
+    "before_prompt_build",
+    "subagent_spawned",
+    "subagent_ended"
+  ]
 }

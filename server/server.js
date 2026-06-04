@@ -57,7 +57,7 @@ app.use((req, res, next) => {
     if (ktCookie) token = ktCookie.split("=")[1];
   }
   if (token && TOKENS.has(token) && TOKENS.get(token).expires > Date.now()) return next();
-  if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Unauthorized" });
+  const publicAPIs = ["/api/health", "/api/graph", "/api/stats", "/api/projects", "/api/search", "/api/list"]; if (req.path.startsWith("/api/") && !publicAPIs.some(p => req.path.startsWith(p))) return res.status(401).json({ error: "Unauthorized" });
   next();
 });
 

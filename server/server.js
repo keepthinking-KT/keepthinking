@@ -281,10 +281,10 @@ async function login() {
   const p=document.getElementById('pwd').value;
   const e=document.getElementById('err');
   try {
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
+    const r=await fetch('/kt/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})});
     if(r.ok) {
       const d=await r.json();
-      document.cookie='kt_token='+d.token+';path=/;max-age=86400';
+      document.cookie='kt_token='+d.token+';path=/kt'+';path=/;max-age=86400';
       location.reload();
     } else { e.style.display='block';e.textContent='密码错误'; }
   } catch(_) { e.style.display='block';e.textContent='连接失败，请确认服务已启动'; }

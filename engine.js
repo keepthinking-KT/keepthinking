@@ -499,6 +499,7 @@ function getMemoryFreeMB() {
   return (os.freemem() / 1024 / 1024).toFixed(0);
 }
 
+let _lastHealth = { ok: true, issues: [], disk: 0, memory: 0, time: null };
 function runEnvCheck() {
   const issues = [];
   try {
@@ -513,7 +514,7 @@ function runEnvCheck() {
     if (issues.length) console.log("[keepthinking] WARNING: " + issues.join("; "));
     else console.log("[keepthinking] health: OK");
   } catch(e) { console.log("[keepthinking] health error:", e.message); }
-  return { ok: issues.length === 0, issues: issues.length ? issues : [], disk: getDiskFreeGB(), memory: getMemoryFreeMB() };
+  _lastHealth = { ok: issues.length === 0, issues: issues.length ? issues : [], disk: getDiskFreeGB(), memory: getMemoryFreeMB(), time: new Date().toISOString() }; return _lastHealth;
 }
 
 let _healthTimer = null;

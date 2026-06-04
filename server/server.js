@@ -84,7 +84,7 @@ app.post("/api/collect/trigger", async (req, res) => { try { await engine.runCol
 // ─── API Endpoints ─────────────────────────────────────────────
 app.get("/api/health", (req, res) => {
   const stats = engine.getStats();
-  res.json({ status: "ok", version: stats.version, uptime: process.uptime(), node: process.version, platform: process.platform, dataDir: stats.dataDir });
+  const h = engine.runEnvCheck(); res.json({ status: "ok", version: stats.version, uptime: process.uptime(), node: process.version, platform: process.platform, dataDir: stats.dataDir, health: { ok: h.ok, issues: h.issues, diskGB: h.disk, memoryMB: h.memory } });
 });
 
 app.get("/api/context", (req, res) => {

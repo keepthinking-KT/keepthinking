@@ -384,7 +384,7 @@
 
 <script>
 // Use same origin as page (works for localhost, LAN IP, or public IP)
-const API = window.location.origin;
+const API = window.location.origin + "/kt";
 
 function GET(path) {
   return fetch(API + path)

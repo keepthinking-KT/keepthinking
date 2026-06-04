@@ -1,5 +1,5 @@
 #!/bin/bash
-# KeepThinking v7.2.0 — 一键安装脚本
+# KeepThinking v7.3.0 — 一键安装脚本
 # 安装方式: bash install.sh (终端交互确认)
 #       或: AGREE=yes bash install.sh (非交互模式，需先阅读条款)
 # 不建议: curl | bash (管道安装需 AGREE=yes 环境变量)
@@ -24,7 +24,7 @@ START_TIME=$(date +%s)
 echo -e "${BOLD}${BLUE}🚀 开始安装，预计耗时 1-3 分钟${NC}"
 echo ""
 echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗"
-echo "║   KeepThinking v7.2.0 — 认知引擎安装脚本    ║"
+echo "║   KeepThinking v7.3.0 — 认知引擎安装脚本    ║"
 echo "║   AI Developer Local Cognitive Engine        ║"
 echo "║   无损安装 · 自动记忆发现                     ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"
@@ -58,7 +58,7 @@ else
 fi
 echo ""
 
-VERSION="7.2.0"
+VERSION="7.3.0"
 DOWNLOAD_BASE="https://cdn.keepthinking.vip/downloads"
 TARBALL="keepthinking-v${VERSION}.tar.gz"
 INSTALL_DIR="${KEEPTHINKING_HOME:-$HOME/.keepthinking}"
@@ -264,7 +264,7 @@ echo -e "  ${YL}从 CDN 下载中...${NC}"
 if [ -d "$INSTALL_DIR/cache/Xenova" ]; then
     echo -e "  ${GR}✅ 模型已存在，跳过${NC}"
 else
-    MODEL_URL="${DOWNLOAD_BASE}/onnx-model-v7.2.0.tar.gz"
+    MODEL_URL="${DOWNLOAD_BASE}/onnx-model-v7.3.0.tar.gz"
     DL_START=$(date +%s)
     if wget --show-progress -O /tmp/onnx-model.tar.gz "$MODEL_URL" 2>&1 || curl -#L "$MODEL_URL" -o /tmp/onnx-model.tar.gz 2>&1; then
         DL_END=$(date +%s); DL_SEC=$((DL_END - DL_START))
@@ -327,11 +327,11 @@ echo ""
 # 自动配置防火墙放行 3456 端口
 echo -e "${BL}🔓 配置防火墙放行 3456 端口...${NC}"
 if command -v ufw &>/dev/null; then
-  ufw allow 3456/tcp 2>/dev/null && echo -e "  ${GR}✓ ufw 已放行${NC}" || echo -e "  ${YL}⊘ ufw 配置失败（可能需sudo）${NC}"
+  sudo ufw allow 3456/tcp 2>/dev/null && echo -e "  ${GR}✓ ufw 已放行${NC}" || echo -e "  ${YL}⊘ ufw 配置失败（可能需sudo）${NC}"
 elif command -v firewall-cmd &>/dev/null; then
-  firewall-cmd --add-port=3456/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null && echo -e "  ${GR}✓ firewalld 已放行${NC}" || echo -e "  ${YL}⊘ firewalld 配置失败${NC}"
+  sudo firewall-cmd --add-port=3456/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null && echo -e "  ${GR}✓ firewalld 已放行${NC}" || echo -e "  ${YL}⊘ firewalld 配置失败${NC}"
 elif command -v iptables &>/dev/null; then
-  iptables -I INPUT -p tcp --dport 3456 -j ACCEPT 2>/dev/null && echo -e "  ${GR}✓ iptables 已放行${NC}" || echo -e "  ${YL}⊘ iptables 配置失败（可能需root）${NC}"
+  sudo iptables -I INPUT -p tcp --dport 3456 -j ACCEPT 2>/dev/null && echo -e "  ${GR}✓ iptables 已放行${NC}" || echo -e "  ${YL}⊘ iptables 配置失败（可能需root）${NC}"
 fi
 # 提示云服务器安全组
 echo -e "  ${YL}ℹ️ 如使用阿里云/腾讯云，还需在控制台安全组放行 TCP 3456${NC}"

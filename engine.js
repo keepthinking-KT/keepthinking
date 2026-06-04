@@ -28,7 +28,7 @@ const DEC_FILE = path.join(MEM_DIR, "decisions.json");
 
 // ─── Config ──────────────────────────────────────────────────
 const CFG = {
-  maxNodes: 200, maxEdges: 500, maxInject: 15, injectChars: 4000,
+  maxNodes: 100000, maxEdges: 500000, maxInject: 100, injectChars: 4000,
   archiveDays: 90, minTaskMs: 3000, decayWindow: 7, decayHalfLife: 30, minWeight: 0.1,
   diskMinGB: 7, memoryMinMB: 500, checkIntervalMs: 1800000,
 };
@@ -111,8 +111,8 @@ function loadGraph() {
 }
 
 function saveGraph(g) {
-  if (g.nodes.length > CFG.maxNodes) g.nodes = g.nodes.slice(-CFG.maxNodes);
-  if (g.edges.length > CFG.maxEdges) g.edges = g.edges.slice(-CFG.maxEdges);
+  if (g.nodes.length > CFG.maxNodes) { console.warn("[keepthinking] ⚠️ 节点数超过上限，已截断"); g.nodes = g.nodes.slice(-CFG.maxNodes); }
+  if (g.edges.length > CFG.maxEdges) { console.warn("[keepthinking] ⚠️ 边数超过上限，已截断"); g.edges = g.edges.slice(-CFG.maxEdges); }
   saveJSON(GRAPH_FILE, g);
 }
 

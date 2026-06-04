@@ -1,6 +1,6 @@
 {
   "name": "@keepthinking-KT/keepthinking",
-  "version": "6.0.0",
+  "version": "7.2.1",
   "description": "Cross-session memory engine with auto-injection — let AI remember your project across every /new",
   "main": "keepthinking.js",
   "engines": {

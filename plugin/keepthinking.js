@@ -1,4 +1,4 @@
-// KeepThinking OpenClaw Plugin v7.2.0
+// KeepThinking OpenClaw Plugin v7.3.0
 // Auto-capture AI decisions via OpenClaw hooks.
 // Reference engine.js for all core capabilities.
 "use strict";
@@ -16,14 +16,20 @@ try {
     try {
       engine = require("/opt/keepthinking-dev/v7/engine.js");
     } catch (_3) {
-      console.error("[keepthinking-plugin] Failed to load engine module");
-      engine = null;
+      try {
+        // v7.3 fallback: production engine path
+        engine = require("/root/.keepthinking/engine.js");
+      } catch (_4) {
+        console.error("[keepthinking-plugin] Failed to load engine module from all paths");
+        engine = null;
+      }
     }
   }
 }
 
 if (!engine) {
-  throw new Error("KeepThinking plugin requires the engine module. Install: /opt/keepthinking-dev/v7");
+  console.error("[keepthinking-plugin] Engine not found. Plugin will NOT capture any data.");
+  // v7.3: don't throw, allow OpenClaw to continue without KT plugin
 }
 
 // ─── In-memory session tracking ───────────────────────────────
@@ -189,7 +195,7 @@ module.exports = function keepthinking(config) {
             metadata: {
               subagentId,
               duration,
-              hookVersion: "7.2.0",
+              hookVersion: "7.3.0",
               taskPreview: task.slice(0, 100),
               resultPreview: result.slice(0, 100),
             },

@@ -1,6 +1,6 @@
 {
   "name": "keepthinking",
-  "version": "7.2.1",
+  "version": "7.3.0",
   "description": "KeepThinking \u2014 AI's Second Brain. OpenClaw native plugin for automatic AI memory capture.",
   "main": "keepthinking.js",
   "openclaw": {

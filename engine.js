@@ -1,4 +1,4 @@
-// KeepThinking v7.2.0 — Independent Cognitive Engine Core
+// KeepThinking v7.3.0 — Independent Cognitive Engine Core
 // "Let AI truly know your project — every /new, every time."
 // Standalone module — no OpenClaw dependency.
 "use strict";
@@ -107,7 +107,7 @@ function guessProject(text) {
 // ══════════════════════════════════════════════════════════════
 
 function loadGraph() {
-  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.2.1" });
+  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.3.0" });
 }
 
 function saveGraph(g) {
@@ -355,7 +355,7 @@ function searchMemory(query, maxResults) {
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResults);
 
-  // Bug pattern diagnosis (v7.2.0)
+  // Bug pattern diagnosis (v7.3.0)
   const bugMatches = bugEngine.classifyBug(query);
   
   const results = all.map(r => {
@@ -478,7 +478,7 @@ function buildCognitiveContext() {
     ctx += "## ⚠️ 代码审查提醒\n最近高频修复 Bug，建议本次改动后检查：空值保护、mounted 检查、异步异常处理\n\n";
   }
   
-  // Git integration (v7.2.0) — auto-discover projects from cognitive graph
+  // Git integration (v7.3.0) — auto-discover projects from cognitive graph
   try {
     const projects = new Set(g.nodes.map(n => n.project).filter(Boolean));
     const { execSync } = require("child_process");
@@ -573,7 +573,7 @@ function getStats() {
   const exps = loadExps();
   const decs = loadDecs();
   return {
-    version: "7.2.1",
+    version: "7.3.0",
     nodes: (g.nodes || []).length,
     edges: (g.edges || []).length,
     experiences: exps.length,
@@ -618,7 +618,7 @@ function listProjects() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  GIT INTEGRATION (v7.2.0)
+//  GIT INTEGRATION (v7.3.0)
 //  Reads local Git history for developer context
 // ══════════════════════════════════════════════════════════════
 
@@ -660,7 +660,7 @@ function readGitContext(maxCommits, workDir) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  LOCAL EMBEDDING ENGINE (v7.2.0)
+//  LOCAL EMBEDDING ENGINE (v7.3.0)
 //  Zero API calls — 100% local ONNX Runtime WASM
 // ══════════════════════════════════════════════════════════════
 
@@ -781,7 +781,7 @@ async function semanticSearch(query, maxResults) {
     saveEmbedCache(cache);
     results.forEach(r => { if (r.tags && r.tags.length <= 1 && r.score < 0.5) r.score *= 0.85; }); results.sort((a, b) => b.score - a.score);
     
-    // Bug pattern diagnosis for semantic search results (v7.2.0)
+    // Bug pattern diagnosis for semantic search results (v7.3.0)
     const semResults = results.slice(0, maxResults || 10).map(r => {
       const entry = { ...r };
       if (r.label) {
@@ -825,7 +825,7 @@ async function semanticSearch(query, maxResults) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  AUTO-DECISION EXTRACTOR (v7.2.0)
+//  AUTO-DECISION EXTRACTOR (v7.3.0)
 //  Extracts key decisions from conversation text using pattern matching
 // ══════════════════════════════════════════════════════════════
 
@@ -848,6 +848,7 @@ const DECISION_STOP_WORDS = new Set([
 
 function extractDecisions(text, maxResults = 10) {
   if (!text || text.length < 10) return [];
+  const MIN_LABEL_LENGTH = 15; // v7.3: reject fragment labels < 15 chars
   // Split into sentences (Chinese: 、。！？ English: .!?)
   // Split by Chinese punctuation first, then English sentences (. followed by space+capital)
   const rawParts = text.split(/(?<=[。！？])\s*/).filter(s => s.trim());
@@ -887,7 +888,7 @@ function extractDecisions(text, maxResults = 10) {
       const m = sent.trim().match(ext.re);
       if (!m) continue;
       const snippet = (m[1] || m[0]).trim();
-      if (snippet.length < 4) continue;
+      if (snippet.length < MIN_LABEL_LENGTH) continue; // v7.3: reject fragments
       if (seen.has(snippet)) continue;
       // Filter: must have at least 3 non-trivial words (skip "in one night." etc)
       const meaningfulWords = snippet.replace(/[.,!?;:，。！？；：]/g,'').trim().split(/\s+/).filter(w => w.length > 1 && !/^(in|on|at|to|of|the|a|an|is|are|was|were|be|it|and|or|but|for|with|from|by|as|we|i|you|he|she|they|not|no|yes|ok)$/i.test(w));
@@ -921,7 +922,7 @@ function extractDecisions(text, maxResults = 10) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AUTO-COLLECT LOOP (v7.2.0) — 持续积累记忆，永不清零
+//  AUTO-COLLECT LOOP (v7.3.0) — 持续积累记忆，永不清零
 // ══════════════════════════════════════════════════════════════
 
 let _collectTimer = null;
@@ -1156,12 +1157,12 @@ module.exports = {
   // Helpers
   gid, nowISO, ensureDir,
 
-  // Embedding engine (v7.2.0)
+  // Embedding engine (v7.3.0)
   getEmbedder, embedText, semanticSearch, cosineSimilarity,
 
-  // Bug pattern engine (v7.2.0)
+  // Bug pattern engine (v7.3.0)
   bugEngine,
 
-  // Auto-collect loop (v7.2.0)
+  // Auto-collect loop (v7.3.0)
   runCollectLoop, startCollectLoop, stopCollectLoop,
 };

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KeepThinking 认知引擎 v7.2.1</title>
+<title>KeepThinking 认知引擎 v7.3.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -304,7 +304,7 @@
 <header>
   <h1>
     🧠 KeepThinking 认知引擎
-    <span class="badge">v7.2.1</span>
+    <span class="badge">v7.3.0</span>
     <span class="status-dot online" id="statusDot" title="API Status"></span>
   </h1>
   <span style="font-size:0.75rem;color:var(--text-muted);">AI Developer Local Cognitive Engine</span>
@@ -354,19 +354,7 @@
 
   <!-- Projects -->
   <div class="card full-width">
-    <h3>⚙️ 自动采集</h3>
-<div id="collect-panel" style="margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
-    <span style="color:var(--text-muted);font-size:13px">间隔:</span>
-    <select id="collect-interval" onchange="updateCollectInterval()" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px">
-      <option value="1">1 分钟</option><option value="5">5 分钟</option><option value="10" selected>10 分钟</option><option value="30">30 分钟</option><option value="60">1 小时</option>
-    </select>
-    <button onclick="triggerCollect()" style="padding:6px 16px;border-radius:4px;background:#238636;color:#fff;border:1px solid #2ea043;font-size:13px;cursor:pointer">🔄 立即抓取</button>
-    <span id="collect-status" style="color:var(--text-muted);font-size:12px"></span>
-  </div>
-</div>
-
-<h3>📂 项目列表</h3>
+    <h3>📂 项目列表</h3>
     <div style="overflow-x: auto;">
       <table class="project-table" id="projectTable">
         <thead><tr><th>项目</th><th>节点</th><th>决策</th><th>经验</th><th>最后活跃</th></tr></thead>
@@ -388,7 +376,8 @@ const API = window.location.origin + "/kt"; let SESSION_TOKEN = "";
 
 function GET(path) {
   const h = {};
-  if (SESSION_TOKEN) h["Authorization"] = "Bearer " + SESSION_TOKEN;
+  const token = SESSION_TOKEN || localStorage.getItem("kt_token") || "";
+  if (token) h["Authorization"] = "Bearer " + token;
   return fetch(API + path, { headers: h })
     .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.json(); });
 }
@@ -444,9 +433,16 @@ async function updateCI() {
 }
 async function cleanNodes() {
   if (!confirm('删除 source=auto-collect 且 weight<1.5 的低质量节点？')) return;
-  const r = await fetch(API + "/api/nodes/clean", { method: "POST" }).then(r=>r.json());
-  document.getElementById("clog").textContent = `✅ 清理完成 — 删除:${r.removed} 剩余节点:${r.nodes} 边:${r.edges}`;
-  loadAll(); loadC();
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '清理中...';
+  try {
+    const r = await fetch(API + "/api/nodes/clean", { method: "POST" }).then(r=>r.json());
+    document.getElementById("clog").textContent = '✅ 清理完成 — 删除:' + (r.removed||0) + ' 剩余节点:' + (r.nodes||0) + ' 边:' + (r.edges||0);
+    loadAll(); loadC();
+  } catch(e) {
+    document.getElementById("clog").textContent = '❌ 清理失败: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '清理低质量';
 }
 async function triggerC() {
   const btn = document.getElementById("ctbtn");
@@ -462,7 +458,6 @@ async function triggerC() {
   }
   btn.disabled = false; btn.textContent = "立即抓取";
   loadAll(); loadC();
-    setInterval(() => { loadAll(); loadC(); }, 10000);
 }
 
 // Update status dot
@@ -507,6 +502,16 @@ async function loadGraph() {
     const container = document.getElementById('graphContent');
     const nodes = g.nodes || [];
     const edges = g.edges || [];
+    allNodes = nodes;
+    const nodeMap = {}; nodes.forEach(n => { nodeMap[n.id] = n; n._edgeCount = 0; });
+    edges.forEach(e => {
+      const fl = (nodeMap[e.from]?.label||e.from||'').slice(0,28);
+      const tl = (nodeMap[e.to]?.label||e.to||'').slice(0,28);
+      e._label = fl + ' → ' + tl + ' [' + (e.relation||'') + ']';
+      if (nodeMap[e.from]) nodeMap[e.from]._edgeCount = (nodeMap[e.from]._edgeCount||0)+1;
+      if (nodeMap[e.to]) nodeMap[e.to]._edgeCount = (nodeMap[e.to]._edgeCount||0)+1;
+    });
+    allEdges = edges; edgePage = 0;
 
     let html = '';
     if (nodes.length) {
@@ -515,8 +520,9 @@ async function loadGraph() {
       html += '<div id="nodeList">';
       for (const n of nodes) {
         if (currentFilter && n.project !== currentFilter) continue;
-        const srcColor = n.source === 'auto-collect' ? '#238636' : n.source === 'auto-prompt' ? '#a371f7' : '#666';
-        const srcLabel = n.source === 'auto-collect' ? '自动' : n.source === 'auto-prompt' ? '插件' : n.source === 'manual' ? '手动' : (n.source || '其他');
+        const srcMap = { 'decision': ['#d29922','决策'], 'api': ['#58a6ff','API'], 'session-auto': ['#238636','自动'], 'auto-collect': ['#238636','自动'], 'auto-prompt': ['#a371f7','插件'], 'manual': ['#8b949e','手动'] };
+        const st = n.type || n.source || 'session-auto';
+        const [srcColor, srcLabel] = srcMap[st] || ['#666',st.slice(0,4)];
         html += '<div class="node-item" style="padding:8px 10px;margin:4px 0;border-radius:6px;background:var(--bg);border:1px solid var(--border);cursor:pointer" onclick="showNodeDetail(\'' + n.id + '\')">';
         html += '<span class="node-id" style="opacity:0.5">' + (n.id || '').slice(0,12) + '</span> ';
         html += '<span style="color:' + srcColor + ';border:1px solid ' + srcColor + ';border-radius:3px;padding:0 5px;font-size:0.65rem;margin-right:6px">' + srcLabel + '</span>';
@@ -528,14 +534,11 @@ async function loadGraph() {
     }
 
     if (edges.length) {
-      html += '<div style="margin-bottom:8px"><select id="projFilter" onchange="currentFilter=this.value;loadGraph();" style="padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:0.8rem"><option value="">全部项目</option></select></div>';
-  html += '<div class="graph-section"><div class="graph-section-title" onclick="var n=document.getElementById(\'edgeList\');n.style.display=n.style.display===\'none\'?\'block\':\'none\';this.textContent=this.textContent.startsWith(\'▶\')?this.textContent.replace(\'▶\',\'▼\'):this.textContent.replace(\'▼\',\'▶\');" style="cursor:pointer">▶ 🔗 边 (' + edges.length + ')</div>';
+      html += '<div class="graph-section"><div class="graph-section-title" onclick="toggleEdgeList()" style="cursor:pointer">▶ 🔗 边 (' + edges.length + ')</div>';
       html += '<div id="edgeList" style="display:none">';
-      for (const e of edges) {
-        const fromLabel = (nodes.find(n => n.id === e.from) || {}).label || e.from;
-        const toLabel = (nodes.find(n => n.id === e.to) || {}).label || e.to;
-        html += '<div class="edge-item">' + (fromLabel || e.from).slice(0, 30) + ' → ' + (toLabel || e.to).slice(0, 30) + ' <span style="color:#a371f7;">[' + (e.relation || '') + ']</span></div>';
-      }
+      html += '<input id="edgeSearch" placeholder="搜索边..." style="width:100%;margin-bottom:8px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:0.75rem" oninput="filterEdges()">';
+      html += '<div id="edgePage" style="max-height:300px;overflow-y:auto;margin-bottom:8px"></div>';
+      html += '<div id="edgePager" style="text-align:center;font-size:0.75rem;color:var(--text-muted)"></div>';
       html += '</div></div>';
     }
 
@@ -621,6 +624,47 @@ document.getElementById('searchInput').addEventListener('input', function() {
     }
   }, 300);
 });
+
+// ── Edge pagination ──
+let allEdges = [], edgePage = 0, edgePageSize = 50;
+function toggleEdgeList() {
+  const el = document.getElementById('edgeList');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  if (el.style.display === 'block') renderEdgePage();
+}
+function renderEdgePage() {
+  const q = (document.getElementById('edgeSearch')?.value || '').toLowerCase();
+  const filtered = allEdges.filter(e => e._label.toLowerCase().includes(q));
+  const total = Math.ceil(filtered.length / edgePageSize);
+  const page = edgePage = Math.min(edgePage, total - 1);
+  const slice = filtered.slice(page * edgePageSize, (page + 1) * edgePageSize);
+  document.getElementById('edgePage').innerHTML = slice.map(e =>
+    '<div class="edge-item">' + e._label + '</div>'
+  ).join('') || '<div class="empty">无匹配边</div>';
+  document.getElementById('edgePager').innerHTML = total > 1
+    ? '<button onclick="edgePage=Math.max(0,edgePage-1);renderEdgePage()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:2px 10px;border-radius:4px;cursor:pointer;margin:0 4px">◀</button> ' +
+      (page+1) + '/' + total +
+      ' <button onclick="edgePage=Math.min('+(total-1)+',edgePage+1);renderEdgePage()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:2px 10px;border-radius:4px;cursor:pointer;margin:0 4px">▶</button>'
+    : '';
+}
+function filterEdges() { edgePage = 0; renderEdgePage(); }
+
+// ── Node detail modal ──
+let allNodes = [];
+function showNodeDetail(id) {
+  const n = allNodes.find(x => x.id === id);
+  if (!n) return;
+  document.getElementById('ndLabel').textContent = n.label || n.id;
+  document.getElementById('ndSource').textContent = n.source || n.type || '-';
+  document.getElementById('ndProject').textContent = n.project || '-';
+  document.getElementById('ndTime').textContent = (n.time || '').slice(0,16);
+  document.getElementById('ndWeight').textContent = n.weight || '-';
+  document.getElementById('ndTags').textContent = (n.tags || []).join(', ') || '-';
+  document.getElementById('ndEdges').textContent = (n._edgeCount != null ? n._edgeCount : '-');
+  document.getElementById('ndContext').textContent = n.context || '(无上下文)';
+  document.getElementById('nodeDetail').style.display = 'flex';
+}
+function closeDetail() { document.getElementById('nodeDetail').style.display = 'none'; }
 
 // Initial load
 loadStats();

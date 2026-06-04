@@ -387,7 +387,9 @@
 const API = window.location.origin + "/kt";
 
 function GET(path) {
-  return fetch(API + path)
+  const h = {};
+  if (SESSION_TOKEN) h["Authorization"] = "Bearer " + SESSION_TOKEN;
+  return fetch(API + path, { headers: h })
     .then(r => { if (!r.ok) throw new Error(r.status + ' ' + r.statusText); return r.json(); });
 }
 

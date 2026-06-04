@@ -76,6 +76,26 @@ app.post("/api/login", (req, res) => {
 const webDir = path.resolve(__dirname, "..", "web");
 app.use(express.static(webDir));
 
+// ─── Cleanup API ─────────────────────────────────────────────
+app.post("/api/nodes/clean", (req, res) => {
+  try {
+    const g = engine.loadGraph();
+    const before = g.nodes.length;
+    // Remove low-quality auto-collect noise nodes (weight < 1.5, short labels)
+    g.nodes = g.nodes.filter(n => {
+      if (n.source === "auto-collect" && (n.weight || 1) < 1.5) return false;
+      if ((n.label || "").length < 15) return false;
+      return true;
+    });
+    // Clean orphaned edges
+    const nodeIds = new Set(g.nodes.map(n => n.id));
+    g.edges = (g.edges || []).filter(e => nodeIds.has(e.from) && nodeIds.has(e.to));
+    engine.saveGraph(g);
+    const after = g.nodes.length;
+    res.json({ ok: true, removed: before - after, nodes: after, edges: g.edges.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Collect API ──────────────────────────────────────────────
 app.get("/api/collect/config", (req, res) => { res.json({ intervalMs: collectIntervalMs, intervalMin: Math.round(collectIntervalMs / 60000) }); });
 app.put("/api/collect/config", (req, res) => { const m = req.body.intervalMin; if (!m || m < 1 || m > 1440) return res.status(400).json({ e: "1-1440 min" }); collectIntervalMs = m * 60000; engine.stopCollectLoop(); engine.startCollectLoop(collectIntervalMs); res.json({ ok: true }); });

@@ -107,7 +107,7 @@ function guessProject(text) {
 // ══════════════════════════════════════════════════════════════
 
 function loadGraph() {
-  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.0" });
+  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.2.1" });
 }
 
 function saveGraph(g) {
@@ -560,7 +560,7 @@ function getStats() {
   const exps = loadExps();
   const decs = loadDecs();
   return {
-    version: "7.2.0",
+    version: "7.2.1",
     nodes: (g.nodes || []).length,
     edges: (g.edges || []).length,
     experiences: exps.length,

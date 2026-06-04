@@ -840,6 +840,12 @@ function extractDecisions(text, maxResults = 10) {
     { re: /(?:部署|上线|发布完成|deployed?|released?)[：:要]*\s*(.+)/i, type: 'deployment' },
     // Architecture: "架构X" "design X"
     { re: /(?:架构|architecture|design)[：:是]*\s*(.+)/i, type: 'architecture' },
+    // General action: 配置了/设置了/安装了/启动了/测试了/验证了/诊断了/检查了/优化了/调整了/修改了/同步了/备份了/恢复了
+    { re: /(?:配置了|设置了|安装了|启动了|测试了|验证了|诊断了|检查了|审计了|优化了|调整了|修改了|更新了|同步了|备份了|恢复了|迁移了|打包了|发布了|上传|下载|编译|构建|部署)[：:]*\s*(.+)/i, type: 'action' },
+    // Problem/solution: 问题/根因/原因/结论/方案/措施/策略/建议/决定 + 是/在于
+    { re: /(?:问题|根因|原因|结论|方案|措施|策略|建议|决定|选择)[：:是]*\s*(.+)/i, type: 'insight' },
+    // Tech keyword sentences: any sentence with key tech terms
+    { re: /(?:.+?(?:API|CDN|SSL|DNS|Nginx|Node\.js|npm|systemd|iptables|tarball|install|deploy|config|engine|server|plugin|hook|MCP|ONNX|Flutter|App\s*Store|TestFlight|IAP|备案|ICP|SSH|防火墙|安全组|GitHub|Git|Express|向量|embed).+)/i, type: 'tech' },
   ];
   
   for (const sent of sentences) {

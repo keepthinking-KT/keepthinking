@@ -101,6 +101,20 @@ module.exports = function keepthinking(config) {
             console.log("[keepthinking] before_prompt_build: injected top-3 related memories for query:",
               sessionText.slice(0, 80));
           }
+
+          // Auto-capture decisions from session text
+          try {
+            const g = engine.loadGraph();
+            const decisions = engine.extractDecisions(sessionText, 5);
+            for (const d of decisions) {
+              engine.addNode(g, d.label, d.project || "general", d.tags, d.context, {
+                source: "auto-prompt",
+                type: d.type,
+                weight: d.confidence ? Math.min(d.confidence * 4, 4) : 2,
+              });
+            }
+          } catch (_) {}
+
         } catch (e) {
           console.error("[keepthinking] before_prompt_build error:", e.message);
         }
@@ -190,26 +204,6 @@ module.exports = function keepthinking(config) {
 
     },
 
-      // ── message_sent: auto-capture from every conversation turn ──
-      message_sent: async (ctx) => {
-        try {
-          const text = ctx.text || ctx.content || "";
-          if (!text || text.length < 20) return;
-          const g = engine.loadGraph();
-          const decisions = engine.extractDecisions(text, 3);
-          if (!decisions || !decisions.length) return;
-          for (const d of decisions) {
-            engine.addNode(g, d.label, d.project || "general", d.tags, d.context, {
-              source: "auto-message",
-              type: d.type,
-              weight: d.confidence ? Math.min(d.confidence * 4, 4) : 2,
-            });
-          }
-          if (opts.verbose) console.log("[keepthinking] message_sent: captured " + decisions.length + " decisions");
-        } catch (e) {
-          console.error("[keepthinking] message_sent error:", e.message);
-        }
-      }, // end hooks
   }; // end return
 }; // end module.exports
 

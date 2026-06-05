@@ -26,7 +26,7 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(attempt), Buffer.from(hash));
 }
 
-const hasPassword = fs.existsSync(PASS_FILE);
+function hasPassword() { return fs.existsSync(PASS_FILE); }
 setInterval(() => {
   const now = Date.now();
   for (const [token, data] of TOKENS) { if (data.expires < now) TOKENS.delete(token); }
@@ -47,7 +47,7 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return next();
   if (pubPrefixes.includes(req.path)) return next();
   if (req.path === "/" || req.path.startsWith("/console.html")) return next();
-  if (!hasPassword) return next();
+  if (!hasPassword()) return next();
   // Check Authorization header
   let token = (req.headers.authorization || "").replace("Bearer ", "");
   // Also check cookie
@@ -64,7 +64,7 @@ app.use((req, res, next) => {
 // Login
 app.post("/api/login", (req, res) => {
   const { password } = req.body || {};
-  if (!password || !hasPassword) return res.status(400).json({ error: "No password set" });
+  if (!password || !hasPassword()) return res.status(400).json({ error: "No password set" });
   const stored = fs.readFileSync(PASS_FILE, "utf8").trim();
   if (!verifyPassword(password, stored)) return res.status(401).json({ error: "Invalid password" });
   const token = crypto.randomBytes(32).toString("hex");
@@ -238,7 +238,7 @@ app.post("/api/bug/diagnose", (req, res) => {
 
 app.get("/", (req, res) => {
   // If password is set and user is not authenticated, show login page
-  if (hasPassword) {
+  if (hasPassword()) {
     let token = (req.headers.authorization || "").replace("Bearer ", "");
     // Also check cookie
     if (!token) {
@@ -307,7 +307,7 @@ app.listen(PORT, HOST, async () => {
   console.log("[keepthinking-server] v7.3.0 — http://" + HOST + ":" + PORT);
   console.log("[keepthinking-server] Data: " + engine.BASE);
   console.log("[keepthinking-server] Web: " + webDir);
-  if (hasPassword) console.log("[keepthinking-server] Auth: password protected");
+  if (hasPassword()) console.log("[keepthinking-server] Auth: password protected");
   engine.startEnvHealer();
   // Start auto-collect loop — accumulates memory forever
   engine.startCollectLoop(collectIntervalMs);

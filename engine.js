@@ -258,6 +258,9 @@ function saveExp(exp) {
 
 function saveDecision(dec) {
   const all = loadJSON(DEC_FILE, []);
+  // v7.7.0: deduplicate by label
+  const exists = all.some(d => d.label === dec.label);
+  if (exists) return;
   all.push(dec);
   if (all.length > 200) all.splice(0, all.length - 200);
   saveJSON(DEC_FILE, all);
@@ -962,6 +965,42 @@ const NOISE_PATTERNS = [
   /^#{1,6}\s/,                                          // Markdown headers
   /^(?:```|---|\*\*\*|\|\s)/,                           // Code blocks/tables
   /(?:openclaw|openai|anthropic)\s+(?:config|plugin|tool)/i, // Internal tool refs
+  /curl\s*\|\s*bash/i,                                  // 安装命令说明
+  /管道安装|AGREE=yes|环境变量/,                         // 安装脚本说明
+  /^(?:bash|sh|wget|curl)\s+/i,                         // 命令行开头
+  /(?:安装|使用|运行|执行)(?:方式|方法|说明|步骤)/,       // 使用说明
+  /(?:非交互|交互|终端|shell|命令行)\s*(?:模式|方式|确认)/, // 交互模式说明
+  
+  // 英文指令片段
+  /^the\s+(?:message|tool|function|command|api|system|user|file)\s+/i,
+  /^if\s+you\s+(?:need|want|should|must)/i,
+  /^when\s+(?:you|the|it|this|that)\s+/i,
+  /^for\s+(?:the|each|every|all)\s+/i,
+  
+  // 对话片段和疑问句
+  /你看看它|你觉得它|你认为它|你说说它|你想想它|你知道它/,
+  /到底在哪里|到底怎么回事|到底是什么问题|问题到底出/,
+  
+  // 特殊符号开头
+  /^——/,                                                 // 破折号开头
+  /^\*\*/,                                               // Markdown 粗体开头
+  /^#\s/,                                                // Markdown 标题
+  
+  // 法规/备案文本
+  /规定》《|法律法规|安全管理标准|履行.*信息.*巡查/,
+  /您填写本次|备案主域名|可通过互联网访问/,
+  
+  // 系统路径
+  /\/root\/workspaces\//,
+  
+  // 内部技术术语
+  /NO_REPLY|session\s*是|接收方\s*session/,
+  
+  // 内部对话痕迹
+  /实际使用体验|局限性.*内容|像是我对.*汇报/,
+  
+  // 多个时间戳（会话片段特征）
+  /\d{1,2}:\d{2}[、,]\s*\d{1,2}:\d{2}/,                  // 多个时间格式 12:06、12:10
 ];
 
 function containsSensitiveInfo(text) {
@@ -1167,7 +1206,23 @@ async function collectSessions() {
           if (text.length < 20) continue;
           const decisions = extractDecisions(text, 5);
           for (const d of decisions) {
-            addNode(g, d.label, d.project || "general", d.tags, d.context, { source: "auto-collect", type: d.type, weight: d.confidence ? Math.min(d.confidence * 4, 4) : 3 });
+            const weight = d.confidence ? Math.min(d.confidence * 4, 4) : 3;
+            addNode(g, d.label, d.project || "general", d.tags, d.context, { source: "auto-collect", type: d.type, weight });
+            // v7.7.0: write high-confidence decisions to decisions.json
+            if (d.score >= 7) {
+              saveDecision({
+                id: "dec_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+                label: d.label,
+                type: d.type,
+                project: d.project || "general",
+                tags: d.tags,
+                context: (d.context || "").slice(0, 200),
+                source: "auto-collect",
+                time: nowISO(),
+                weight,
+                score: d.score
+              });
+            }
             imported++;
           }
         }
@@ -1217,7 +1272,23 @@ async function collectGitProjects() {
           
           const decisions = extractDecisions("[Git] " + proj + ": " + msg, 3);
           for (const d of decisions) {
-            addNode(g, d.label, proj, d.tags, d.context, { source: "git-commit", type: d.type, weight: d.confidence ? Math.min(d.confidence * 4, 4) : 3 });
+            const weight = d.confidence ? Math.min(d.confidence * 4, 4) : 3;
+            addNode(g, d.label, proj, d.tags, d.context, { source: "git-commit", type: d.type, weight });
+            // v7.7.0: write high-confidence decisions to decisions.json
+            if (d.score >= 7) {
+              saveDecision({
+                id: "dec_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+                label: d.label,
+                type: d.type,
+                project: proj,
+                tags: d.tags,
+                context: (d.context || "").slice(0, 200),
+                source: "git-commit",
+                time: nowISO(),
+                weight,
+                score: d.score
+              });
+            }
             imported++;
           }
           _collectedCommitHashes.add(hash);

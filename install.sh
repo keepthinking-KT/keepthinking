@@ -312,11 +312,14 @@ echo ""
 
 # ── 密码设置 ──
 export KEEPTHINKING_HOME="$INSTALL_DIR"
-if [ -t 0 ]; then
+if [ -n "$KT_PASSWORD" ]; then
+    # 非交互模式：使用 KT_PASSWORD 环境变量
+    node "$INSTALL_DIR/password.js" --set "$KT_PASSWORD" 2>/dev/null && echo -e "${GR}✅ 密码已设置${NC}" || echo -e "${YL}⚠️ 设置失败，可稍后手动设置${NC}"
+elif [ -t 0 ]; then
+    # 交互模式：终端输入
     echo -e "${BL}🔐 设置 Web 控制台密码${NC}"
-    echo -e "  ${BOLD}运行: node $INSTALL_DIR/password.js --set 你的密码${NC}"
     read -s -p "  输入密码（回车跳过）: " USER_PASSWORD
-    echo
+    echo ""
     if [ -n "$USER_PASSWORD" ]; then
         node "$INSTALL_DIR/password.js" --set "$USER_PASSWORD" 2>/dev/null && echo -e "${GR}✅ 密码已设置${NC}" || echo -e "${YL}⚠️ 设置失败，可稍后手动设置${NC}"
     fi

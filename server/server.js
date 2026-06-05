@@ -1,4 +1,4 @@
-// KeepThinking v7.3.1 — Independent HTTP Server
+// KeepThinking v7.7.0 — Independent HTTP Server
 // Local server for Web Console and API endpoints.
 "use strict";
 
@@ -283,7 +283,7 @@ button:hover{background:#388bfd}
 <input type="password" id="pwd" placeholder="请输入访问密码" autofocus>
 <button onclick="login()">登 录</button>
 <p class="error" id="err"></p>
-<p class="footer">v7.3.1 · 数据100%本地 · 零上传</p>
+<p class="footer">v7.7.0 · 数据100%本地 · 零上传</p>
 </div>
 <script>
 async function login() {
@@ -306,14 +306,14 @@ document.getElementById('pwd').addEventListener('keydown',e=>{if(e.key==='Enter'
   }
   const html = path.join(webDir, "console.html");
   if (fs.existsSync(html)) res.type("html").send(fs.readFileSync(html, "utf8"));
-  else res.type("html").send("<h1>KeepThinking v7.3.1</h1>");
+  else res.type("html").send("<h1>KeepThinking v7.7.0</h1>");
 });
 
 app.use((req, res) => res.status(404).json({ error: "Not found", path: req.path }));
 
 // ─── Start ─────────────────────────────────────────────────────
 app.listen(PORT, HOST, async () => {
-  console.log("[keepthinking-server] v7.3.1 — http://" + HOST + ":" + PORT);
+  console.log("[keepthinking-server] v7.7.0 — http://" + HOST + ":" + PORT);
   console.log("[keepthinking-server] Data: " + engine.BASE);
   console.log("[keepthinking-server] Web: " + webDir);
   if (hasPassword()) console.log("[keepthinking-server] Auth: password protected");

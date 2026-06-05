@@ -1,4 +1,4 @@
-// KeepThinking v7.3.0 — Independent Cognitive Engine Core
+// KeepThinking v7.7.0 — Independent Cognitive Engine Core
 // "Let AI truly know your project — every /new, every time."
 // Standalone module — no OpenClaw dependency.
 "use strict";
@@ -10,7 +10,7 @@ const os = require("os");
 const bugEngine = require('./engine-bug');
 
 const BASE = process.env.KEEPTHINKING_HOME || path.join(process.env.HOME || "/root", ".keepthinking");
-const VERSION = "7.3.1"; // v7.3.1: improved extraction quality + sensitive info filtering
+const VERSION = "7.7.0"; // v7.7.0: improved extraction quality + sensitive info filtering
 
 // Allow loading dependencies from server/node_modules (for production install)
 const serverNodeModules = path.join(BASE, "server", "node_modules");
@@ -108,7 +108,7 @@ function guessProject(text) {
 // ══════════════════════════════════════════════════════════════
 
 function loadGraph() {
-  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.3.1" });
+  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.7.0" });
 }
 
 function saveGraph(g) {
@@ -356,7 +356,7 @@ function searchMemory(query, maxResults) {
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResults);
 
-  // Bug pattern diagnosis (v7.3.0)
+  // Bug pattern diagnosis (v7.7.0)
   const bugMatches = bugEngine.classifyBug(query);
   
   const results = all.map(r => {
@@ -479,7 +479,7 @@ function buildCognitiveContext() {
     ctx += "## ⚠️ 代码审查提醒\n最近高频修复 Bug，建议本次改动后检查：空值保护、mounted 检查、异步异常处理\n\n";
   }
   
-  // Git integration (v7.3.0) — auto-discover projects from cognitive graph
+  // Git integration (v7.7.0) — auto-discover projects from cognitive graph
   try {
     const projects = new Set(g.nodes.map(n => n.project).filter(Boolean));
     const { execSync } = require("child_process");
@@ -566,7 +566,7 @@ function stopEnvHealer() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  NODE QUALITY SCORING (v7.3.1)
+//  NODE QUALITY SCORING (v7.7.0)
 //  Score each node 0-10 based on completeness, source, connectivity, recency
 // ══════════════════════════════════════════════════════════════
 
@@ -668,7 +668,7 @@ function getStats() {
   const exps = loadExps();
   const decs = loadDecs();
   return {
-    version: "7.3.1",
+    version: "7.7.0",
     nodes: (g.nodes || []).length,
     edges: (g.edges || []).length,
     experiences: exps.length,
@@ -713,7 +713,7 @@ function listProjects() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  GIT INTEGRATION (v7.3.0)
+//  GIT INTEGRATION (v7.7.0)
 //  Reads local Git history for developer context
 // ══════════════════════════════════════════════════════════════
 
@@ -755,7 +755,7 @@ function readGitContext(maxCommits, workDir) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  LOCAL EMBEDDING ENGINE (v7.3.0)
+//  LOCAL EMBEDDING ENGINE (v7.7.0)
 //  Zero API calls — 100% local ONNX Runtime WASM
 // ══════════════════════════════════════════════════════════════
 
@@ -876,7 +876,7 @@ async function semanticSearch(query, maxResults) {
     saveEmbedCache(cache);
     results.forEach(r => { if (r.tags && r.tags.length <= 1 && r.score < 0.5) r.score *= 0.85; }); results.sort((a, b) => b.score - a.score);
     
-    // Bug pattern diagnosis for semantic search results (v7.3.0)
+    // Bug pattern diagnosis for semantic search results (v7.7.0)
     const semResults = results.slice(0, maxResults || 10).map(r => {
       const entry = { ...r };
       if (r.label) {
@@ -920,7 +920,7 @@ async function semanticSearch(query, maxResults) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  AUTO-DECISION EXTRACTOR (v7.3.0)
+//  AUTO-DECISION EXTRACTOR (v7.7.0)
 //  Extracts key decisions from conversation text using pattern matching
 // ══════════════════════════════════════════════════════════════
 
@@ -941,7 +941,7 @@ const DECISION_STOP_WORDS = new Set([
   'this', 'that', 'it', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'from', 'by', 'as',
 ]);
 
-// v7.3.1: Sensitive info patterns — reject any text containing these
+// v7.7.0: Sensitive info patterns — reject any text containing these
 const SENSITIVE_PATTERNS = [
   /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/,           // IP addresses
   /(?:sk|ghp|clh|LTAI)[-_][A-Za-z0-9]{8,}/,         // API keys/tokens
@@ -953,7 +953,7 @@ const SENSITIVE_PATTERNS = [
   /[A-Fa-f0-9]{32,64}/,                               // Long hex strings (hashes used as keys)
 ];
 
-// v7.3.1: System/instruction text patterns — reject these
+// v7.7.0: System/instruction text patterns — reject these
 const NOISE_PATTERNS = [
   /^(?:use|using|using the|use the)\s+(?:the\s+)?(?:tool|function|command|cli|api)/i,
   /^(?:run|execute|call|invoke)\s+(?:the\s+)?(?:tool|function|command|cli|api)/i,
@@ -974,7 +974,7 @@ function isNoiseText(text) {
 
 function extractDecisions(text, maxResults = 10) {
   if (!text || text.length < 10) return [];
-  const MIN_LABEL_LENGTH = 15; // v7.3.1: stricter minimum
+  const MIN_LABEL_LENGTH = 15; // v7.7.0: stricter minimum
   // Split into sentences (Chinese: 、。！？ English: .!?)
   // Split by Chinese punctuation first, then English sentences (. followed by space+capital)
   const rawParts = text.split(/(?<=[。！？])\s*/).filter(s => s.trim());
@@ -1013,7 +1013,7 @@ function extractDecisions(text, maxResults = 10) {
   
   for (const sent of sentences) {
     if (sent.trim().length < 4) continue;
-    // v7.3.1: Skip noise/instruction text
+    // v7.7.0: Skip noise/instruction text
     if (isNoiseText(sent)) continue;
     for (const ext of extractors) {
       const m = sent.trim().match(ext.re);
@@ -1022,13 +1022,13 @@ function extractDecisions(text, maxResults = 10) {
       if (snippet.length < MIN_LABEL_LENGTH) continue;
       if (seen.has(snippet)) continue;
       
-      // v7.3.1: Reject fragments starting with punctuation
+      // v7.7.0: Reject fragments starting with punctuation
       if (/^[，,。.！!？?；;：:、\s]/.test(snippet)) continue;
       
-      // v7.3.1: Reject sensitive information
+      // v7.7.0: Reject sensitive information
       if (containsSensitiveInfo(snippet)) continue;
       
-      // v7.3.1: For Chinese text, use character length instead of word count
+      // v7.7.0: For Chinese text, use character length instead of word count
       const isChinese = /[\u4e00-\u9fa5]/.test(snippet);
       let contentScore = 0;
       if (isChinese) {
@@ -1071,7 +1071,7 @@ function extractDecisions(text, maxResults = 10) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  AUTO-COLLECT LOOP (v7.3.0) — 持续积累记忆，永不清零
+//  AUTO-COLLECT LOOP (v7.7.0) — 持续积累记忆，永不清零
 // ══════════════════════════════════════════════════════════════
 
 let _collectTimer = null;
@@ -1128,7 +1128,7 @@ async function collectSessions() {
       
       try {
         const content = fs.readFileSync(jsonlPath, "utf8");
-        const lines = content.trim().split("\n").slice(-500); // v7.3.1: expanded from 100 to 500 lines
+        const lines = content.trim().split("\n").slice(-500); // v7.7.0: expanded from 100 to 500 lines
         const texts = [];
         let userMsg = "";
         for (const line of lines) {
@@ -1139,7 +1139,7 @@ async function collectSessions() {
             if (msg.type === "message" && msg.message) {
               role = msg.message.role;
               if (Array.isArray(msg.message.content)) {
-                // v7.3.1: extract text from array items, skip empty
+                // v7.7.0: extract text from array items, skip empty
                 text = msg.message.content
                   .filter(c => c && typeof c === 'object' && c.text)
                   .map(c => c.text)
@@ -1155,7 +1155,7 @@ async function collectSessions() {
               text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
             }
             if (role === "user" && text) userMsg = text;
-            // v7.3.1: if assistant has no text but userMsg exists, still create a record
+            // v7.7.0: if assistant has no text but userMsg exists, still create a record
             if (role === "assistant" && userMsg) {
               texts.push(userMsg + (text ? "\n" + text : ""));
               userMsg = "";
@@ -1312,15 +1312,15 @@ module.exports = {
   // Helpers
   gid, nowISO, ensureDir,
 
-  // Embedding engine (v7.3.0)
+  // Embedding engine (v7.7.0)
   getEmbedder, embedText, semanticSearch, cosineSimilarity,
 
-  // Bug pattern engine (v7.3.0)
+  // Bug pattern engine (v7.7.0)
   bugEngine,
 
-  // Auto-collect loop (v7.3.0)
+  // Auto-collect loop (v7.7.0)
   runCollectLoop, startCollectLoop, stopCollectLoop,
 
-  // Node quality scoring (v7.3.1)
+  // Node quality scoring (v7.7.0)
   calculateNodeQuality, getNodeQualityDistribution,
 };

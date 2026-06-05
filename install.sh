@@ -60,6 +60,7 @@ echo ""
 
 VERSION="7.3.0"
 DOWNLOAD_BASE="https://cdn.keepthinking.vip/downloads"
+FALLBACK_BASE="https://keepthinking.vip/downloads"
 TARBALL="keepthinking-v${VERSION}.tar.gz"
 INSTALL_DIR="${KEEPTHINKING_HOME:-$HOME/.keepthinking}"
 
@@ -265,15 +266,38 @@ if [ -d "$INSTALL_DIR/cache/Xenova" ]; then
     echo -e "  ${GR}✅ 模型已存在，跳过${NC}"
 else
     MODEL_URL="${DOWNLOAD_BASE}/onnx-model-v7.3.0.tar.gz"
+    MODEL_FALLBACK_URL="${FALLBACK_BASE}/onnx-model-v7.3.0.tar.gz"
     DL_START=$(date +%s)
+    
+    # 尝试 CDN 下载
     if wget --show-progress -O /tmp/onnx-model.tar.gz "$MODEL_URL" 2>&1 || curl -#L "$MODEL_URL" -o /tmp/onnx-model.tar.gz 2>&1; then
+        # 验证文件大小（应该 > 70MB）
+        DL_SIZE=$(stat -f%z /tmp/onnx-model.tar.gz 2>/dev/null || stat -c%s /tmp/onnx-model.tar.gz 2>/dev/null)
+        if [ -z "$DL_SIZE" ] || [ "$DL_SIZE" -lt 70000000 ]; then
+            echo -e "  ${YL}⚠️  CDN 返回文件过小 (${DL_SIZE:-0} bytes)，切换到源站直连...${NC}"
+            rm -f /tmp/onnx-model.tar.gz
+            # 回退到源站
+            if wget --show-progress -O /tmp/onnx-model.tar.gz "$MODEL_FALLBACK_URL" 2>&1 || curl -#L "$MODEL_FALLBACK_URL" -o /tmp/onnx-model.tar.gz 2>&1; then
+                DL_SIZE=$(stat -f%z /tmp/onnx-model.tar.gz 2>/dev/null || stat -c%s /tmp/onnx-model.tar.gz 2>/dev/null)
+            fi
+        fi
+    else
+        # CDN 下载失败，回退到源站
+        echo -e "  ${YL}⚠️  CDN 下载失败，切换到源站直连...${NC}"
+        wget --show-progress -O /tmp/onnx-model.tar.gz "$MODEL_FALLBACK_URL" 2>&1 || curl -#L "$MODEL_FALLBACK_URL" -o /tmp/onnx-model.tar.gz 2>&1
+        DL_SIZE=$(stat -f%z /tmp/onnx-model.tar.gz 2>/dev/null || stat -c%s /tmp/onnx-model.tar.gz 2>/dev/null)
+    fi
+    
+    # 验证并解压
+    if [ -f /tmp/onnx-model.tar.gz ] && [ "$DL_SIZE" -gt 70000000 ] 2>/dev/null; then
         DL_END=$(date +%s); DL_SEC=$((DL_END - DL_START))
-        echo -e "  ${GR}✓ 下载完成 (${DL_SEC}s)${NC}"
+        echo -e "  ${GR}✓ 下载完成 (${DL_SEC}s, $((DL_SIZE/1024/1024))MB)${NC}"
         mkdir -p "$INSTALL_DIR/cache"
         tar xzf /tmp/onnx-model.tar.gz -C "$INSTALL_DIR/cache/" 2>/dev/null && echo -e "  ${GR}✅ ONNX 语义模型已缓存 (130MB)${NC}" || echo -e "  ${YL}ℹ️ 解压失败，首次搜索时自动下载${NC}"
         rm -f /tmp/onnx-model.tar.gz
     else
         echo -e "  ${YL}ℹ️ 下载失败，首次搜索时自动下载${NC}"
+        rm -f /tmp/onnx-model.tar.gz
     fi
 fi
 
@@ -318,7 +342,7 @@ if [ -n "$KT_PASSWORD" ]; then
 elif [ -t 0 ]; then
     # 交互模式：终端输入
     echo -e "${BL}🔐 设置 Web 控制台密码${NC}"
-    read -s -p "  输入密码（回车跳过）: " USER_PASSWORD
+    read -p "  输入密码（回车跳过）: " USER_PASSWORD
     echo ""
     if [ -n "$USER_PASSWORD" ]; then
         node "$INSTALL_DIR/password.js" --set "$USER_PASSWORD" 2>/dev/null && echo -e "${GR}✅ 密码已设置${NC}" || echo -e "${YL}⚠️ 设置失败，可稍后手动设置${NC}"
@@ -344,7 +368,7 @@ echo ""
 
 echo -e "${BL}🚀 正在启动 KeepThinking...${NC}"
 export KEEPTHINKING_HOME="$INSTALL_DIR"
-nohup node "$INSTALL_DIR/loader.js" > "$INSTALL_DIR/keepthinking.log" 2>&1 &
+KEEPTHINKING_HOME="$INSTALL_DIR" nohup node "$INSTALL_DIR/loader.js" > "$INSTALL_DIR/keepthinking.log" 2>&1 &
 sleep 3
 if curl -s http://localhost:3456/api/health > /dev/null 2>&1; then
   echo -e "  ${GR}✅ KeepThinking v${VERSION} 已启动！${NC}"

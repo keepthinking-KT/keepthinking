@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-// KeepThinking MCP Server v7.2.0
+// KeepThinking MCP Server v7.7.0
 // Universal Developer Cognitive Engine — works with any MCP-compatible agent
 // (Claude Desktop, Cursor, OpenAgent, OpenClaw, Hermes, etc.)
 //
-// IMPROVEMENTS in v7.2.0:
+// IMPROVEMENTS in v7.7.0:
 //   - Added engine_status tool (nodes, edges, exp, dec, disk, memory)
 //   - Independent: uses local engine module (no OpenClaw dependency)
 //   - Standalone deployment via ~/.keepthinking/
 //
 // Tools:
 //   search_memory    — semantic search across all past sessions
-//   bug_diagnose     — diagnose bugs against known patterns (NEW in v7.2.0)
+//   bug_diagnose     — diagnose bugs against known patterns (NEW in v7.7.0)
 //   get_context      — full project context with cognitive graph ranking
 //   list_projects    — list all known projects with stats
 //   cognitive_graph  — full cognitive graph (nodes + edges) for visual analysis
-//   engine_status    — engine health & stats (NEW in v7.2.0)
+//   engine_status    — engine health & stats (NEW in v7.7.0)
 
 "use strict";
 const fs = require("fs");
@@ -37,7 +37,7 @@ try {
   }
 }
 
-// Bug engine for bug diagnosis (v7.2.0)
+// Bug engine for bug diagnosis (v7.7.0)
 let bugEngine;
 try {
   bugEngine = require(path.join(__dirname, "..", "engine-bug.js"));
@@ -251,7 +251,7 @@ process.stdin.on("data", async (chunk) => {
 
 const g = engine.loadGraph();
 const s = engine.getStats();
-process.stderr.write("[keepthinking-mcp] v7.2.0 — independent cognitive engine ready\n");
+process.stderr.write("[keepthinking-mcp] v7.7.0 — independent cognitive engine ready\n");
 process.stderr.write("[keepthinking-mcp] Graph: " + (g.nodes||[]).length + " nodes, " + (g.edges||[]).length + " edges\n");
 process.stderr.write("[keepthinking-mcp] Data: " + s.dataDir + "\n");
 process.stderr.write("[keepthinking-mcp] Health: " + s.diskFreeGB + "G disk, " + s.memoryFreeMB + "MB mem\n");

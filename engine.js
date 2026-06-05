@@ -10,6 +10,7 @@ const os = require("os");
 const bugEngine = require('./engine-bug');
 
 const BASE = process.env.KEEPTHINKING_HOME || path.join(process.env.HOME || "/root", ".keepthinking");
+const VERSION = "7.3.1"; // v7.3.1: improved extraction quality + sensitive info filtering
 
 // Allow loading dependencies from server/node_modules (for production install)
 const serverNodeModules = path.join(BASE, "server", "node_modules");
@@ -107,7 +108,7 @@ function guessProject(text) {
 // ══════════════════════════════════════════════════════════════
 
 function loadGraph() {
-  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.3.0" });
+  return loadJSON(GRAPH_FILE, { nodes: [], edges: [], version: "7.3.1" });
 }
 
 function saveGraph(g) {
@@ -565,6 +566,100 @@ function stopEnvHealer() {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  NODE QUALITY SCORING (v7.3.1)
+//  Score each node 0-10 based on completeness, source, connectivity, recency
+// ══════════════════════════════════════════════════════════════
+
+function calculateNodeQuality(node, graph) {
+  let score = 0;
+  const label = node.label || '';
+  const time = node.time || '';
+  const source = node.source || '';
+  const nodeId = node.id;
+
+  // 1. Content completeness (0-3 points)
+  //    < 10 chars = 0 (fragment), 10-50 chars = 2, > 50 chars = 3
+  if (label.length < 10) {
+    score += 0;
+  } else if (label.length < 50) {
+    score += 2;
+  } else {
+    score += 3;
+  }
+
+  // 2. Source reliability (0-3 points)
+  //    manual = 3, auto-collect/auto-extract = 2, test/import = 1
+  if (source === 'manual' || source === 'user') {
+    score += 3;
+  } else if (source.startsWith('auto-collect') || source === 'auto-extract' || source === 'git-commit') {
+    score += 2;
+  } else if (source === 'test' || source === 'import') {
+    score += 1;
+  } else {
+    score += 1; // unknown source
+  }
+
+  // 3. Connectivity (0-2 points)
+  //    Count edges connected to this node
+  if (graph && graph.edges) {
+    const edgeCount = graph.edges.filter(e => e.from === nodeId || e.to === nodeId).length;
+    if (edgeCount === 0) {
+      score += 0;
+    } else if (edgeCount <= 5) {
+      score += 1;
+    } else {
+      score += 2;
+    }
+  }
+
+  // 4. Recency (0-2 points)
+  //    7 days = 2, 30 days = 1, >30 days = 0
+  if (time) {
+    const days = ageDays(time);
+    if (days <= 7) {
+      score += 2;
+    } else if (days <= 30) {
+      score += 1;
+    } else {
+      score += 0;
+    }
+  }
+
+  return {
+    score: score,
+    grade: score >= 8 ? 'high' : score >= 5 ? 'medium' : 'low',
+    details: {
+      contentScore: label.length < 10 ? 0 : label.length < 50 ? 2 : 3,
+      sourceScore: (source === 'manual' || source === 'user') ? 3 : (source.startsWith('auto-collect') || source === 'auto-extract' || source === 'git-commit') ? 2 : (source === 'test' || source === 'import') ? 1 : 1,
+      connectivityScore: graph && graph.edges ? (graph.edges.filter(e => e.from === nodeId || e.to === nodeId).length === 0 ? 0 : graph.edges.filter(e => e.from === nodeId || e.to === nodeId).length <= 5 ? 1 : 2) : 0,
+      recencyScore: time ? (ageDays(time) <= 7 ? 2 : ageDays(time) <= 30 ? 1 : 0) : 0,
+    }
+  };
+}
+
+function getNodeQualityDistribution() {
+  const g = loadGraph();
+  const nodes = g.nodes || [];
+  const results = nodes.map(node => ({
+    id: node.id,
+    label: node.label ? node.label.slice(0, 80) : '',
+    ...calculateNodeQuality(node, g)
+  }));
+
+  const high = results.filter(r => r.grade === 'high');
+  const medium = results.filter(r => r.grade === 'medium');
+  const low = results.filter(r => r.grade === 'low');
+
+  return {
+    total: results.length,
+    high: { count: high.length, nodes: high.slice(0, 10) },
+    medium: { count: medium.length, nodes: medium.slice(0, 10) },
+    low: { count: low.length, nodes: low.slice(0, 10) },
+    avgScore: results.length > 0 ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length * 10) / 10 : 0
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
 //  GET STATS (for dashboard / API)
 // ══════════════════════════════════════════════════════════════
 
@@ -573,7 +668,7 @@ function getStats() {
   const exps = loadExps();
   const decs = loadDecs();
   return {
-    version: "7.3.0",
+    version: "7.3.1",
     nodes: (g.nodes || []).length,
     edges: (g.edges || []).length,
     experiences: exps.length,
@@ -846,9 +941,40 @@ const DECISION_STOP_WORDS = new Set([
   'this', 'that', 'it', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'from', 'by', 'as',
 ]);
 
+// v7.3.1: Sensitive info patterns — reject any text containing these
+const SENSITIVE_PATTERNS = [
+  /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/,           // IP addresses
+  /(?:sk|ghp|clh|LTAI)[-_][A-Za-z0-9]{8,}/,         // API keys/tokens
+  /(?:password|passwd|secret|token|key|授权码|密码)["'\s:=]+[\w!@#$%^&*]{4,}/i, // passwords
+  /Bearer\s+[A-Za-z0-9._-]{10,}/i,                   // Bearer tokens
+  /-----BEGIN.*PRIVATE KEY-----/,                      // Private keys
+  /(?:ssh|scp|rsync)\s+.*@\d+\.\d+/,                 // SSH commands with IPs
+  /root\/.+\/\.env|\.env\.local/,                     // env file paths
+  /[A-Fa-f0-9]{32,64}/,                               // Long hex strings (hashes used as keys)
+];
+
+// v7.3.1: System/instruction text patterns — reject these
+const NOISE_PATTERNS = [
+  /^(?:use|using|using the|use the)\s+(?:the\s+)?(?:tool|function|command|cli|api)/i,
+  /^(?:run|execute|call|invoke)\s+(?:the\s+)?(?:tool|function|command|cli|api)/i,
+  /^(?:you can|you should|you must|you need to|please|note that|important:)/i,
+  /^(?:以下是|下面是|注意|重要|提示|说明|例如|比如)/,
+  /^#{1,6}\s/,                                          // Markdown headers
+  /^(?:```|---|\*\*\*|\|\s)/,                           // Code blocks/tables
+  /(?:openclaw|openai|anthropic)\s+(?:config|plugin|tool)/i, // Internal tool refs
+];
+
+function containsSensitiveInfo(text) {
+  return SENSITIVE_PATTERNS.some(p => p.test(text));
+}
+
+function isNoiseText(text) {
+  return NOISE_PATTERNS.some(p => p.test(text));
+}
+
 function extractDecisions(text, maxResults = 10) {
   if (!text || text.length < 10) return [];
-  const MIN_LABEL_LENGTH = 15; // v7.3: reject fragment labels < 15 chars
+  const MIN_LABEL_LENGTH = 15; // v7.3.1: stricter minimum
   // Split into sentences (Chinese: 、。！？ English: .!?)
   // Split by Chinese punctuation first, then English sentences (. followed by space+capital)
   const rawParts = text.split(/(?<=[。！？])\s*/).filter(s => s.trim());
@@ -862,37 +988,60 @@ function extractDecisions(text, maxResults = 10) {
   const seen = new Set();
   
   const extractors = [
-    // Fix/bug patterns: "修复了X" "fixed X" "solved X"
-    { re: /(?:修[复改正]了|fix(?:ed)?|resolved?|solved?|patched?)[：:]*\s*(.+)/i, type: 'bug' },
-    // Decision patterns: "决定X" "decided to X" "should X"
-    { re: /(?:决定|决定要|确定|选[用择定]|采用|定下|拍板)[：:]*\s*(.+)/i, type: 'decision' },
-    { re: /(?:should|decided to|chose to|plan to|going to)\s+(.+)/i, type: 'decision' },
-    // Creation: "创建了X" "实现了X" "添加了X" "集成了X"
-    { re: /(?:创建了|新建了|初始化了|搭建了|实现了|完成了|添加了|加入了|更新了|升级了|优化了|重构了|集成了|增加了|发布了|created|added|implemented|integrated)[：:]*\s*(.+)/gi, type: 'creation' },
+    // Fix/bug patterns: "修复了X" "fixed X" "solved X" "问题找到了"
+    { re: /(?:修[复改正]了|fix(?:ed)?|resolved?|solved?|patched?|问题找到了|找到问题|发现[了个问题]|根因[是为])[：:]*\s*(.+)/i, type: 'bug' },
+    // Decision patterns: "决定X" "decided to X" "should X" "用X方案"
+    { re: /(?:决定|决定要|确定|选[用择定]|采用|定下|拍板|用.*方案|选择.*方案|改用|切换到)[：:]*\s*(.+)/i, type: 'decision' },
+    { re: /(?:should|decided to|chose to|plan to|going to|use|switch to)\s+(.+)/i, type: 'decision' },
+    // Creation: "创建了X" "实现了X" "添加了X" "集成了X" "写了X脚本"
+    { re: /(?:创建了|新建了|初始化了|搭建了|实现了|完成了|添加了|加入了|更新了|升级了|优化了|重构了|集成了|增加了|发布了|写了|开发了|created|added|implemented|integrated|developed)[：:]*\s*(.+)/gi, type: 'creation' },
     // Action verbs: "给/为/对/把...添加了/修复了/实现了/改为了"
-    { re: /(?:给|为|对|在)\s*(.+?(?:添加了|加入了|实现了|完成了|修复了|改为了|更新了|升级了|优化了|重构了|集成了).+)/i, type: 'creation' },
+    { re: /(?:给|为|对|在|把)\s*(.+?(?:添加了|加入了|实现了|完成了|修复了|改为了|更新了|升级了|优化了|重构了|集成了|删除了|清理了).+)/i, type: 'creation' },
     // Deployment: "部署X" "上线X" "发布X" "deployed X"
     { re: /(?:部署|上线|发布完成|deployed?|released?)[：:要]*\s*(.+)/i, type: 'deployment' },
     // Architecture: "架构X" "design X"
     { re: /(?:架构|architecture|design)[：:是]*\s*(.+)/i, type: 'architecture' },
-    // General action: 配置了/设置了/安装了/启动了/测试了/验证了/诊断了/检查了/优化了/调整了/修改了/同步了/备份了/恢复了
-    { re: /(?:配置了|设置了|安装了|启动了|测试了|验证了|诊断了|检查了|审计了|优化了|调整了|修改了|更新了|同步了|备份了|恢复了|迁移了|打包了|发布了|上传|下载|编译|构建|部署)[：:]*\s*(.+)/i, type: 'action' },
-    // Problem/solution: 问题/根因/原因/结论/方案/措施/策略/建议/决定 + 是/在于
-    { re: /(?:问题|根因|原因|结论|方案|措施|策略|建议|决定|选择)[：:是]*\s*(.+)/i, type: 'insight' },
-
+    // General action: 配置了/设置了/安装了/启动了/测试了/验证了/诊断了/检查了/优化了/调整了/修改了/同步了/备份了/恢复了/执行了
+    { re: /(?:配置了|设置了|安装了|启动了|测试了|验证了|诊断了|检查了|审计了|优化了|调整了|修改了|更新了|同步了|备份了|恢复了|迁移了|打包了|发布了|上传了|下载了|编译了|构建了|部署了|执行了|运行了|重启了|停止了)[：:]*\s*(.+)/i, type: 'action' },
+    // Problem/solution: 问题/根因/原因/结论/方案/措施/策略/建议/决定 + 是/在于/是X
+    { re: /(?:问题|根因|原因|结论|方案|措施|策略|建议|决定|选择|关键|重点|核心)[：:是为]*\s*(.+)/i, type: 'insight' },
+    // Technical commands/patterns: "改成X" "改为X" "替换成X"
+    { re: /(?:改成|改为|替换成|换成|用.*替代|改成.*方式|改成.*模式)[：:了]*\s*(.+)/i, type: 'action' },
+    // Verification/testing: "验证通过" "测试成功" "正常工作"
+    { re: /(?:验证通过|测试成功|正常工作|已经.*成功|确认.*正常|检查.*正常)[：:了]*\s*(.+)/i, type: 'insight' },
   ];
   
   for (const sent of sentences) {
     if (sent.trim().length < 4) continue;
+    // v7.3.1: Skip noise/instruction text
+    if (isNoiseText(sent)) continue;
     for (const ext of extractors) {
       const m = sent.trim().match(ext.re);
       if (!m) continue;
       const snippet = (m[1] || m[0]).trim();
-      if (snippet.length < MIN_LABEL_LENGTH) continue; // v7.3: reject fragments
+      if (snippet.length < MIN_LABEL_LENGTH) continue;
       if (seen.has(snippet)) continue;
-      // Filter: must have at least 3 non-trivial words (skip "in one night." etc)
-      const meaningfulWords = snippet.replace(/[.,!?;:，。！？；：]/g,'').trim().split(/\s+/).filter(w => w.length > 1 && !/^(in|on|at|to|of|the|a|an|is|are|was|were|be|it|and|or|but|for|with|from|by|as|we|i|you|he|she|they|not|no|yes|ok)$/i.test(w));
-      if (meaningfulWords.length < 3) continue;
+      
+      // v7.3.1: Reject fragments starting with punctuation
+      if (/^[，,。.！!？?；;：:、\s]/.test(snippet)) continue;
+      
+      // v7.3.1: Reject sensitive information
+      if (containsSensitiveInfo(snippet)) continue;
+      
+      // v7.3.1: For Chinese text, use character length instead of word count
+      const isChinese = /[\u4e00-\u9fa5]/.test(snippet);
+      let contentScore = 0;
+      if (isChinese) {
+        // Chinese: require at least 12 meaningful characters
+        const meaningfulChars = snippet.replace(/[\s.,!?;:，。！？；：、\[\]{}()（）【】]/g, '');
+        if (meaningfulChars.length < 12) continue;
+        contentScore = meaningfulChars.length > 25 ? 2 : 1;
+      } else {
+        // English: require at least 3 non-trivial words
+        const meaningfulWords = snippet.replace(/[.,!?;:]/g,'').trim().split(/\s+/).filter(w => w.length > 1 && !/^(in|on|at|to|of|the|a|an|is|are|was|were|be|it|and|or|but|for|with|from|by|as|we|i|you|he|she|they|not|no|yes|ok|that|this|if|so|do|did|has|have|had)$/i.test(w));
+        if (meaningfulWords.length < 3) continue;
+        contentScore = meaningfulWords.length > 6 ? 2 : 1;
+      }
       seen.add(snippet);
       
       const project = guessProject(snippet);
@@ -904,7 +1053,7 @@ function extractDecisions(text, maxResults = 10) {
         score: Math.min(10, Math.round(
           (snippet.length > 30 ? 4 : 2) +
           (ext.type === 'decision' ? 3 : ext.type === 'action' ? 2 : 1) +
-          (meaningfulWords.length > 5 ? 2 : 1)
+          contentScore
         )),
         label: snippet.slice(0, 200),
         context: snippet.slice(0, 300),
@@ -979,7 +1128,7 @@ async function collectSessions() {
       
       try {
         const content = fs.readFileSync(jsonlPath, "utf8");
-        const lines = content.trim().split("\n").slice(-50);
+        const lines = content.trim().split("\n").slice(-500); // v7.3.1: expanded from 100 to 500 lines
         const texts = [];
         let userMsg = "";
         for (const line of lines) {
@@ -990,7 +1139,12 @@ async function collectSessions() {
             if (msg.type === "message" && msg.message) {
               role = msg.message.role;
               if (Array.isArray(msg.message.content)) {
-                text = msg.message.content.map(c => c.text || "").join("\n");
+                // v7.3.1: extract text from array items, skip empty
+                text = msg.message.content
+                  .filter(c => c && typeof c === 'object' && c.text)
+                  .map(c => c.text)
+                  .join("\n");
+                if (!text) text = null;
               } else if (typeof msg.message.content === "string") {
                 text = msg.message.content;
               }
@@ -1001,8 +1155,9 @@ async function collectSessions() {
               text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
             }
             if (role === "user" && text) userMsg = text;
-            if (role === "assistant" && text && userMsg) {
-              texts.push(userMsg + "\n" + text);
+            // v7.3.1: if assistant has no text but userMsg exists, still create a record
+            if (role === "assistant" && userMsg) {
+              texts.push(userMsg + (text ? "\n" + text : ""));
               userMsg = "";
             }
           } catch (_) {}
@@ -1165,4 +1320,7 @@ module.exports = {
 
   // Auto-collect loop (v7.3.0)
   runCollectLoop, startCollectLoop, stopCollectLoop,
+
+  // Node quality scoring (v7.3.1)
+  calculateNodeQuality, getNodeQualityDistribution,
 };

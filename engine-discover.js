@@ -8,34 +8,53 @@ const fs = require('fs');
 const path = require('path');
 
 // ── 1. Discover OpenClaw agent sessions ──
+// 修复：扫描所有 agent 目录，不再写死 main
 function discoverOpenClawSessions(homeDir) {
-  const sessionsDir = path.join(homeDir, '.openclaw', 'agents', 'main', 'sessions');
-  if (!fs.existsSync(sessionsDir)) return [];
+  const agentsDir = path.join(homeDir, '.openclaw', 'agents');
+  if (!fs.existsSync(agentsDir)) return [];
   
   const sessions = [];
-  const entries = fs.readdirSync(sessionsDir, { withFileTypes: true });
   
-  for (const entry of entries) {
-    if (!entry.isFile()) continue;
-    if (!entry.name.endsWith('.jsonl')) continue;
-    if (entry.name.includes('.trajectory.')) continue;
-    if (entry.name === 'sessions.json') continue;
+  // 遍历所有 agent 目录（kongming, daqiao, xiaoqiao 等）
+  let agentDirs;
+  try {
+    agentDirs = fs.readdirSync(agentsDir, { withFileTypes: true })
+      .filter(e => e.isDirectory())
+      .map(e => e.name);
+  } catch(_) { return []; }
+  
+  for (const agentName of agentDirs) {
+    const sessionsDir = path.join(agentsDir, agentName, 'sessions');
+    if (!fs.existsSync(sessionsDir)) continue;
     
-    const filePath = path.join(sessionsDir, entry.name);
+    let entries;
     try {
-      const stat = fs.statSync(filePath);
-      const content = fs.readFileSync(filePath, 'utf8');
-      const extractedText = extractMessageText(content);
+      entries = fs.readdirSync(sessionsDir, { withFileTypes: true });
+    } catch(_) { continue; }
+    
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.endsWith('.jsonl')) continue;
+      if (entry.name.includes('.trajectory.')) continue;
+      if (entry.name === 'sessions.json') continue;
       
-      sessions.push({
-        file: entry.name,
-        path: filePath,
-        size: content.length,
-        mtime: stat.mtime.toISOString(),
-        keywords: extractSessionKeywords(extractedText),
-        lineCount: content.split('\n').filter(Boolean).length
-      });
-    } catch(_) {}
+      const filePath = path.join(sessionsDir, entry.name);
+      try {
+        const stat = fs.statSync(filePath);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const extractedText = extractMessageText(content);
+        
+        sessions.push({
+          file: entry.name,
+          agent: agentName,  // 记录所属 agent
+          path: filePath,
+          size: content.length,
+          mtime: stat.mtime.toISOString(),
+          keywords: extractSessionKeywords(extractedText),
+          lineCount: content.split('\n').filter(Boolean).length
+        });
+      } catch(_) {}
+    }
   }
   
   sessions.sort((a, b) => {

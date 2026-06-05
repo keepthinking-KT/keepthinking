@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KeepThinking 认知引擎 v7.3.0</title>
+<title>KeepThinking 认知引擎 v7.3.1</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -304,7 +304,7 @@
 <header>
   <h1>
     🧠 KeepThinking 认知引擎
-    <span class="badge">v7.3.0</span>
+    <span class="badge">v7.3.1</span>
     <span class="status-dot online" id="statusDot" title="API Status"></span>
   </h1>
   <span style="font-size:0.75rem;color:var(--text-muted);">AI Developer Local Cognitive Engine</span>
@@ -372,7 +372,7 @@
 
 <script>
 // Use same origin as page (works for localhost, LAN IP, or public IP)
-// v7.3.0: detect whether we're behind xuanjifu.com/kt reverse proxy or direct access
+// v7.3.1: detect whether we're behind xuanjifu.com/kt reverse proxy or direct access
 const _isProxy = window.location.pathname.startsWith("/kt");
 const API = _isProxy ? window.location.origin + "/kt" : window.location.origin;
 let SESSION_TOKEN = "";
@@ -415,7 +415,7 @@ async function triggerCollect() {
   }).then(r=>r.json());
   document.getElementById("collect-log").textContent = `✅ 抓取完成 (${new Date().toLocaleTimeString()}) — 节点:${r.result?.nodes||"?"}`;
   btn.disabled = false; btn.textContent = "🔄 立即抓取";
-  loadCollectConfig(); loadAll(); loadCollectConfig();
+  loadCollectConfig(); loadStats(); loadGraph(); loadCollectConfig();
 }
 
 async function loadC() {
@@ -441,7 +441,7 @@ async function cleanNodes() {
   try {
     const r = await fetch(API + "/api/nodes/clean", { method: "POST" }).then(r=>r.json());
     document.getElementById("clog").textContent = '✅ 清理完成 — 删除:' + (r.removed||0) + ' 剩余节点:' + (r.nodes||0) + ' 边:' + (r.edges||0);
-    loadAll(); loadC();
+    loadStats(); loadGraph(); loadC();
   } catch(e) {
     document.getElementById("clog").textContent = '❌ 清理失败: ' + e.message;
   }
@@ -460,7 +460,7 @@ async function triggerC() {
     document.getElementById("clog").textContent = `❌ 抓取失败: ${e.message}`;
   }
   btn.disabled = false; btn.textContent = "立即抓取";
-  loadAll(); loadC();
+  loadStats(); loadGraph(); loadC();
 }
 
 // Update status dot

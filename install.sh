@@ -1,5 +1,5 @@
 #!/bin/bash
-# KeepThinking v7.3.0 — 一键安装脚本
+# KeepThinking v7.7.0 — 一键安装脚本
 # 安装方式: bash install.sh (终端交互确认)
 #       或: AGREE=yes bash install.sh (非交互模式，需先阅读条款)
 # 不建议: curl | bash (管道安装需 AGREE=yes 环境变量)
@@ -24,7 +24,7 @@ START_TIME=$(date +%s)
 echo -e "${BOLD}${BLUE}🚀 开始安装，预计耗时 1-3 分钟${NC}"
 echo ""
 echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗"
-echo "║   KeepThinking v7.3.0 — 认知引擎安装脚本    ║"
+echo "║   KeepThinking v7.7.0 — 认知引擎安装脚本    ║"
 echo "║   AI Developer Local Cognitive Engine        ║"
 echo "║   无损安装 · 自动记忆发现                     ║"
 echo -e "╚══════════════════════════════════════════════╝${NC}"

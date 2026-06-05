@@ -1,4 +1,4 @@
-// KeepThinking Memory Discovery Engine v7.2.0
+// KeepThinking Memory Discovery Engine v7.7.0
 // Auto-discovers and imports existing AI memories without data loss
 //
 // Scans OpenClaw agent session JSONL files and imports key decisions,

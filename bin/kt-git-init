@@ -1,5 +1,5 @@
 #!/bin/bash
-# KeepThinking v7.1.0 — Git Hook Installer
+# KeepThinking v7.7.0 — Git Hook Installer
 # Usage: kt-git-init [--port PORT] [--host HOST]
 # Reads current directory, installs post-commit hook to sync commits to KeepThinking
 

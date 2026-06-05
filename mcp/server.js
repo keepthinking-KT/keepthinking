@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// KeepThinking MCP Server v7.2.1
+// KeepThinking MCP Server v7.7.0
 // 8-tool MCP server — powered by engine.js
 "use strict";
 

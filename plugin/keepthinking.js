@@ -1,4 +1,4 @@
-// KeepThinking OpenClaw Plugin v7.3.0
+// KeepThinking OpenClaw Plugin v7.7.0
 // Auto-capture AI decisions via OpenClaw hooks.
 // Reference engine.js for all core capabilities.
 "use strict";

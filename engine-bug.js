@@ -1,4 +1,4 @@
-// KeepThinking v7.2.0 — Bug Pattern Engine
+// KeepThinking v7.7.0 — Bug Pattern Engine
 // "同一个错误不犯两次 — Never debug the same bug twice."
 // Bug模式库：常见Bug模式的向量化定义 + 识别 + 修复建议
 // Integrated with engine.js semanticSearch() for automatic bug diagnosis during search.

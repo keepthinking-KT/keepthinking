@@ -1,4 +1,4 @@
-// KeepThinking v7.2.0 — JSC Loader
+// KeepThinking v7.7.0 — JSC Loader
 // Handles loading of both .js (source) and .jsc (bytecode) engine files.
 // Usage: node loader.js
 //   or:  node -r ./loader.js server/server.js
@@ -59,7 +59,7 @@ module.exports = loadEngine();
 
 // If this file is run directly, start the HTTP server
 if (require.main === module) {
-  console.log("[keepthinking-loader] Starting KeepThinking v7.2.0 server...");
+  console.log("[keepthinking-loader] Starting KeepThinking v7.7.0 server...");
   
   // Install express if needed
   const serverDir = path.join(ENGINE_DIR, "server");
